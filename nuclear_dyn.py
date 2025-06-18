@@ -251,11 +251,11 @@ if Gamma_type == 'const':
 elif Gamma_type == 'R6':
     if partial_GamR:
         VEr_au_woVR = VEr_au
-        print('VEr_au = ', VEr_au)
-        outfile.write('VEr_au = ' + str(VEr_au) + '\n')
+    print('VEr_au = ', VEr_au)
+    outfile.write('VEr_au = ' + str(VEr_au) + '\n')
     VEr_au = VEr_au*res_Req**3                            # adjusts VEr_au by the R dependent factor
-    print('VEr_au_adjusted = ', VEr_au)
-    outfile.write('VEr_au_adjusted = ' + str(VEr_au) + '\n')
+    print('R independent part of VEr_au (prefactor) = ', VEr_au)
+    outfile.write('R independent part of VEr_au (prefactor) = ' + str(VEr_au) + '\n')
 elif Gamma_type == 'external':
     if partial_GamR:
         VEr_au_woVR = VEr_au
@@ -718,9 +718,9 @@ outfile.write('\n' + '----------------------------------------------------------
 #-------------------------------------------------------------------------
 # determine total decay width matrix element
 print('Effective decay widths in eV and lifetimes in s:')
-print('n_res  W_l [eV]          tau_l [s]')
+print('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]')
 outfile.write('Effective decay widths in eV and lifetimes in s:' + '\n')
-outfile.write('n_res  W_l [eV]          tau_l [s]' + '\n')
+outfile.write('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]' + '\n')
 W_lambda = []   # [W_(l=0), W_(l=1), ...]
 for l in range (0,n_res_max+1):
     tmp = 0
@@ -735,9 +735,9 @@ for l in range (0,n_res_max+1):
         else:
             tmp = tmp + VEr_au_woVR**2 * np.abs(res_fin_woVR[l][m])**2 * factor
     W_lambda.append(tmp)
-    ttmp = 1./ (2 * np.pi * tmp)        # lifetime tau_l = 1 / (2 pi W_l)
-    print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}')
-    outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}\n')
+    ttmp = 1./ (2*np.pi*tmp)        # lifetime tau_l = 1 / (2 pi W_l)
+    print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+    outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}\n')
 print()
 outfile.write('\n')
 
