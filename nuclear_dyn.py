@@ -277,12 +277,11 @@ n_gs_max = int(lambda_param_gs - 0.5)   # ? ONLY ONE GS MAY BE POPULATED OR ELSE
 print("n_gs_max = ", n_gs_max)
 print('n_gs  ' + 'E [au]            ' + 'E [eV]')
 outfile.write('n_gs  ' + 'E [au]            ' + 'E [eV]' + '\n')
-E_kappas = []   # collects vibr energies of GS
-for n in range (0,n_gs_max+1):
-    ev = wf.eigenvalue(n,gs_de,gs_a,red_mass)   # ev stands for eigenvalue, not for electronvolt (it is, in fact, in au!)
-    E_kappas.append(ev)
-    outfile.write('{:4d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
-    print('{:4d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+E_kappas = wf.eigenvalue(np.arange(0, n_gs_max + 1), gs_de, gs_a, red_mass)  # collects vibr energies of GS
+for n, (eigv_au, eigv_eV) in enumerate(np.column_stack(
+        (E_kappas,sciconv.hartree_to_ev(E_kappas)))):
+    outfile.write('{:4d}  {:14.10E}  {:14.10E}\n'.format(n, eigv_au, eigv_eV))
+    print('{:4d}  {:14.10E}  {:14.10E}'.format(n, eigv_au, eigv_eV))
 
 #resonance state
 print()
@@ -294,14 +293,13 @@ outfile.write("Energies of vibrational states of the resonance state" + '\n')
 lambda_param_res = np.sqrt(2*red_mass*res_de) / res_a
 n_res_max = int(lambda_param_res - 0.5)
 print("n_res_max = ", n_res_max)
-E_lambdas = []
-outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
 print('n_res  ' + 'E [au]            ' + 'E [eV]')
-for n in range (0,n_res_max+1):
-    ev = wf.eigenvalue(n,res_de,res_a,red_mass)
-    E_lambdas.append(ev)
-    outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
-    print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
+E_lambdas = wf.eigenvalue(np.arange(0, n_res_max + 1), res_de, res_a, red_mass)
+for n, (eigv_au, eigv_eV) in enumerate(np.column_stack(
+        (E_lambdas,sciconv.hartree_to_ev(E_lambdas)))):
+    outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n, eigv_au, eigv_eV))
+    print('{:5d}  {:14.10E}  {:14.10E}'.format(n, eigv_au, eigv_eV))
 
 #final state
 print()
@@ -318,14 +316,13 @@ if (fin_pot_type == 'morse'):
     lambda_param_fin = np.sqrt(2*red_mass*fin_de) / fin_a
     n_fin_max = int(lambda_param_fin - 0.5)     # Maximum quantum number = n_fin_max -> number of states = n_fin_max + 1
     print("n_fin_max = ", n_fin_max)
-    E_mus = []
     print('n_fin  ' + 'E [au]            ' + 'E [eV]')
     outfile.write('n_fin  ' + 'E [au]            ' + 'E [eV]' + '\n')
-    for n in range (0,n_fin_max+1):
-        ev = wf.eigenvalue(n,fin_de,fin_a,red_mass)
-        E_mus.append(ev)
-        outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
-        print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+    E_mus = wf.eigenvalue(np.arange(0, n_fin_max + 1), fin_de, fin_a, red_mass)
+    for n, (eigv_au, eigv_eV) in enumerate(np.column_stack(
+            (E_mus, sciconv.hartree_to_ev(E_mus)))):
+        outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n, eigv_au, eigv_eV))
+        print('{:5d}  {:14.10E}  {:14.10E}'.format(n, eigv_au, eigv_eV))
 elif (fin_pot_type in ('hyperbel','hypfree')):
     print('Final state is repulsive')
     outfile.write('Final state is repulsive' + '\n')
@@ -335,7 +332,6 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
     E_fin_au_1 = fin_hyp_b
     R_hyp_step = fin_c
     threshold = fin_d   # If, coming from high mu, for a certain mu all |<mu|kappa>| and |<mu|lambda>| are < threshold, don't calc FCF and integrals for all mu < that mu
-    E_mus = []
     R_start_EX_max = fin_hyp_a / (EX_max_au - fin_hyp_b)        # R_start of hyperbola corresponding to EX_max_au, used as minimum starting point for discretizing final vibr states
     outfile.write('Continuous vibrational states of the final state are discretized:\n')
     outfile.write('Energy of highest possibly considered vibrational state\n of the final state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...\n'.format(
@@ -520,11 +516,8 @@ if (fin_pot_type == 'morse'):
 elif (fin_pot_type in ('hyperbel','hypfree')):
     if args.fc:            # If an FC input file is provided, read in the FC integrals from it and skip their calculation
         gs_res, gs_fin, res_fin, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
-        R_start = R_start_EX_max        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
-        for m in range(0,n_fin_max_X+1):
-            E_mu = fin_hyp_a / R_start
-            E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
-            R_start = R_start + R_hyp_step
+        R_starts = R_start_EX_max + R_hyp_step * np.arange(n_fin_max_X + 1) # Initialize R_start at the lowest considered value, then increase by a constant R_hyp_step
+        E_mus = fin_hyp_a / R_starts[::-1] # Start with high R_start do that low energies get low mu numbers
         norm_factor = 1.
         if partial_GamR:
             gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
@@ -539,6 +532,7 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
                 sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
 
     else:
+        E_mus = []
         FCfunc = wf.mp_FCmor_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FCmor_freehyp
         Req_max = max(gs_Req, res_Req)
         R_start = R_start_EX_max        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
@@ -865,11 +859,7 @@ t_au = -TX_au/2
 
 
 # construct list of energy points
-Ekins = []
-E_kin_au = E_min_au
-while (E_kin_au <= E_max_au):
-    Ekins.append(sciconv.hartree_to_ev(E_kin_au))
-    E_kin_au = E_kin_au + E_step_au
+Ekins = sciconv.hartree_to_ev(np.array(E_min_au, E_max_au, E_step_au))
 
 
 #-------------------------------------------------------------------------
