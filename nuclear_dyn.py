@@ -502,8 +502,8 @@ if (fin_pot_type == 'morse'):
     else:
         for m in range(0,n_fin_max+1):
             for k in range(0,n_gs_max+1):
-                FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
-                                     k,gs_a,gs_Req,gs_de,R_min,R_max)
+                FC = 0 #wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
+                       #              k,gs_a,gs_Req,gs_de,R_min,R_max)
                 gs_fin[k].append(FC)
             for l in range(0,n_res_max+1):
                 FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
@@ -549,10 +549,10 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
             print(f'--- R_start = {R_start:7.4f} au = {sciconv.bohr_to_angstrom(R_start):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start - R_start_EX_max) / R_hyp_step  + 0.1)}')    #?
     #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_mu = {E_mu:5.5f} au = {sciconv.hartree_to_ev(E_mu):5.5f} eV, steps: {int((R_start - R_start_EX_max) / R_hyp_step  + 0.1)}\n')  #?
             for k in range(0,n_gs_max+1):
-                FC = FCfunc(k,gs_a,gs_Req,gs_de,red_mass,
-                            fin_hyp_a,fin_hyp_b,R_start,R_min,R_max)
+                FC = 0 #FCfunc(k,gs_a,gs_Req,gs_de,red_mass,
+                       #     fin_hyp_a,fin_hyp_b,R_start,R_min,R_max)
                 gs_fin[k].insert(0,FC)
-                print(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}')   #?
+#                print(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}')   #?
     #            outfile.write(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}\n')   #?
             for l in range(0,n_res_max+1):
                 FC = FCfunc(l,res_a,res_Req,res_de,red_mass,
@@ -887,7 +887,7 @@ if (fin_pot_type in ('hyperbel','hypfree')):
 
 # for wavepacket in resonance state(s)
 wp_prefs = [(1.j/(n_res_max+1) * rdg_au * gs_res[0][nlambda] \
-               + mp.pi/(n_res_max+1) * VEr_au * cdg_au_V * indir_FCsums[nlambda])
+        )#               + mp.pi/(n_res_max+1) * VEr_au * cdg_au_V * indir_FCsums[nlambda])
             for nlambda in range(n_res_max+1)]
 
 
@@ -936,12 +936,12 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                 
                 # Direct term
                 if (integ_outer == "quadrature"):
-                    I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_au)
-                    dir_J1 = prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
+                    I1 = 0 # ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_au)
+                    dir_J1 = 0 # prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
     
                 elif (integ_outer == "romberg"):
-                    I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_au)
-                    dir_J1 = prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
+                    I1 = 0 # ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_au)
+                    dir_J1 = 0 # prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
                  
                 # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
                 J = 0
@@ -956,13 +956,13 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                         if not partial_GamR == 'exp':
                             res_J1 = (prefac_res1 * res_I[0]
                                       * gs_res[0][nlambda] * res_fin[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I[0]
-                                        * indir_FCsums[nlambda] * res_fin[nlambda][nmu])
+                            indir_J1 = 0 # (prefac_indir1 * res_I[0]
+                                         #* indir_FCsums[nlambda] * res_fin[nlambda][nmu])
                         else:
                             res_J1 = (prefac_res1 * res_I[0]
                                       * gs_res[0][nlambda] * res_fin_woVR[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I[0]
-                                        * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
+                            indir_J1 = 0 #(prefac_indir1 * res_I[0]
+                                         #* indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
     
                     elif (integ_outer == "romberg"):
                         res_I = ci.complex_romberg(res_outer_fun, (-TX_au/2), t_au)
@@ -970,13 +970,13 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                         if not partial_GamR == 'exp':
                             res_J1 = (prefac_res1 * res_I
                                       * gs_res[0][nlambda] * res_fin[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I
-                                        * indir_FCsums[nlambda] * res_fin[nlambda][nmu])
+                            indir_J1 = 0 #(prefac_indir1 * res_I
+                                         #* indir_FCsums[nlambda] * res_fin[nlambda][nmu])
                         else:
                             res_J1 = (prefac_res1 * res_I
                                       * gs_res[0][nlambda] * res_fin_woVR[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I
-                                        * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
+                            indir_J1 = 0 #(prefac_indir1 * res_I
+                                         #* indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
         
                     J = (J
                          + res_J1
@@ -1068,13 +1068,13 @@ while (t_au >= TX_au/2\
                 
                 # Direct term
                 if (integ_outer == "quadrature"):
-                    I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), TX_au/2)
-                    dir_J1 = prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
+                    I1 = 0 # ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), TX_au/2)
+                    dir_J1 = 0 # prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
     #                    print(nmu, gs_fin[0][nmu], dir_J1)   #?
         
                 elif (integ_outer == "romberg"):
-                    I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), TX_au/2)
-                    dir_J1 = prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
+                    I1 = 0 # ci.complex_romberg(fun_t_dir_1, (-TX_au/2), TX_au/2)
+                    dir_J1 = 0 # prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
     
                 # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
                 J = 0
@@ -1090,14 +1090,14 @@ while (t_au >= TX_au/2\
                         if not partial_GamR == 'exp':
                             res_J1 = (prefac_res1 * res_I[0]
                                       * gs_res[0][nlambda] * res_fin[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I[0]
-                                        * indir_FCsums[nlambda] * res_fin[nlambda][nmu])
+                            indir_J1 = 0 # (prefac_indir1 * res_I[0]
+                                         #* indir_FCsums[nlambda] * res_fin[nlambda][nmu])
     #                        print(nmu, nlambda, 'res_J1 =', res_J1, 'indir_J1 =', indir_J1)   #?
                         else:
                             res_J1 = (prefac_res1 * res_I[0]
                                       * gs_res[0][nlambda] * res_fin_woVR[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I[0]
-                                        * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
+                            indir_J1 = 0 # (prefac_indir1 * res_I[0]
+                                         #* indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
     #                        print(nmu, nlambda, 'res_J1 =', res_J1, 'indir_J1 =', indir_J1)   #?
         
                     elif (integ_outer == "romberg"):
@@ -1106,13 +1106,13 @@ while (t_au >= TX_au/2\
                         if not partial_GamR == 'exp':
                             res_J1 = (prefac_res1 * res_I
                                       * gs_res[0][nlambda] * res_fin[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I
-                                        * indir_FCsums[nlambda] * res_fin[nlambda][nmu])
+                            indir_J1 = 0 #(prefac_indir1 * res_I
+                                         #* indir_FCsums[nlambda] * res_fin[nlambda][nmu])
                         else:
                             res_J1 = (prefac_res1 * res_I
                                       * gs_res[0][nlambda] * res_fin_woVR[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I
-                                        * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
+                            indir_J1 = 0 #(prefac_indir1 * res_I
+                                         #* indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
     
     
                     J = (J
