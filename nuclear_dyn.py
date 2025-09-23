@@ -84,6 +84,8 @@ print(str(dt_start))
 outfile.write(str(dt_start) + '\n')
 outfile.write('Tempora mutantur, nos et mutamur in illis.\n')
 outfile.write("The results were obtained with nuclear_dyn.py\n")
+outfile.write("WARNING: ONLY RESONANCE PATHWAY IS ACTIVE, OTHERS ARE SUPPRESSED!\n")
+print("WARNING: ONLY RESONANCE PATHWAY IS ACTIVE, OTHERS ARE SUPPRESSED!")
 
 infile = args.infile
 print(infile)
