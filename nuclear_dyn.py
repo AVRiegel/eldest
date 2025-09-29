@@ -11,12 +11,13 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander Riegel from July 2023 onwards                   #
-# last change: 2025-06-25 AVR                                            #
+# last change: 2025-09-29 AVR                                            #
 ##########################################################################
 
 import argparse
 from datetime import datetime
 import dill
+import joblib
 import mpmath as mp
 import numpy as np
 from os import devnull
@@ -154,6 +155,13 @@ if args.gamma:
     print('Gamma(R) dependence is read from file: ' + str(args.gamma))
     outfile.write('Gamma(R) dependence is read from file: ' + str(args.gamma) + '\n')
 
+def flatten(obj):
+    """Flatten arbitrarily nested lists and return single generator, needed for printing."""
+    if isinstance(obj, list):
+        for item in obj:
+            yield from flatten(item)
+    else:
+        yield obj
 
 #-------------------------------------------------------------------------
 # Convert input parameters to atomic units
@@ -277,7 +285,7 @@ n_gs_max = int(lambda_param_gs - 0.5)   # ? ONLY ONE GS MAY BE POPULATED OR ELSE
 print("n_gs_max = ", n_gs_max)
 print('n_gs  ' + 'E [au]            ' + 'E [eV]')
 outfile.write('n_gs  ' + 'E [au]            ' + 'E [eV]' + '\n')
-E_kappas = wf.eigenvalue(np.arange(0, n_gs_max + 1), gs_de, gs_a, red_mass)  # collects vibr energies of GS
+E_kappas = wf.eigenvalue(np.arange(n_gs_max + 1), gs_de, gs_a, red_mass)  # collects vibr energies of GS
 for n, (eigv_au, eigv_eV) in enumerate(np.column_stack(
         (E_kappas,sciconv.hartree_to_ev(E_kappas)))):
     outfile.write('{:4d}  {:14.10E}  {:14.10E}\n'.format(n, eigv_au, eigv_eV))
@@ -295,7 +303,7 @@ n_res_max = int(lambda_param_res - 0.5)
 print("n_res_max = ", n_res_max)
 print('n_res  ' + 'E [au]            ' + 'E [eV]')
 outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
-E_lambdas = wf.eigenvalue(np.arange(0, n_res_max + 1), res_de, res_a, red_mass)
+E_lambdas = wf.eigenvalue(np.arange(n_res_max + 1), res_de, res_a, red_mass)
 for n, (eigv_au, eigv_eV) in enumerate(np.column_stack(
         (E_lambdas,sciconv.hartree_to_ev(E_lambdas)))):
     outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n, eigv_au, eigv_eV))
@@ -318,7 +326,7 @@ if (fin_pot_type == 'morse'):
     print("n_fin_max = ", n_fin_max)
     print('n_fin  ' + 'E [au]            ' + 'E [eV]')
     outfile.write('n_fin  ' + 'E [au]            ' + 'E [eV]' + '\n')
-    E_mus = wf.eigenvalue(np.arange(0, n_fin_max + 1), fin_de, fin_a, red_mass)
+    E_mus = wf.eigenvalue(np.arange(n_fin_max + 1), fin_de, fin_a, red_mass)
     for n, (eigv_au, eigv_eV) in enumerate(np.column_stack(
             (E_mus, sciconv.hartree_to_ev(E_mus)))):
         outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n, eigv_au, eigv_eV))
@@ -517,7 +525,7 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
     if args.fc:            # If an FC input file is provided, read in the FC integrals from it and skip their calculation
         gs_res, gs_fin, res_fin, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
         R_starts = R_start_EX_max + R_hyp_step * np.arange(n_fin_max_X + 1) # Initialize R_start at the lowest considered value, then increase by a constant R_hyp_step
-        E_mus = fin_hyp_a / R_starts[::-1] # Start with high R_start do that low energies get low mu numbers
+        E_mus = fin_hyp_a / R_starts[::-1] # Start with high R_start so that low energies get low mu numbers
         norm_factor = 1.
         if partial_GamR:
             gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
@@ -792,64 +800,62 @@ if (Xshape == 'convoluted'):    # Calculate field strength EX = -(AX fX)'
 elif (Xshape == 'infinite'):
     FX_t1 = lambda t1: + A0X * Omega_au * np.cos(Omega_au * t1)
     #FX_t1 = lambda t1: - A0X * np.sin(Omega_au * t1)
-                       
+
 
 #-------------------------------------------------------------------------
 # technical definitions of functions (remember: FX is the field strength EX)
 #direct ionization
-fun_t_dir_1 = lambda t1: FX_t1(t1)   * np.exp(1j * E_fin_au * (t1-t_au)) \
-                                     * np.exp(1j * E_kin_au * (t1-t_au))        # Note: before any of these fncts are called, E_fin is redefined to also include E_mu
-fun_TX2_dir_1 = lambda t1: FX_t1(t1) * np.exp(1j * E_fin_au * (t1-t_au)) \
-                                     * np.exp(1j * E_kin_au * (t1-t_au))        # Same as fun_t_dir_1 - why keep ?
+def fun_t_dir_1(t1,t_au,E_kin_au,E_fin_au):
+    return FX_t1(t1) * np.exp(1j * E_fin_au * (t1-t_au)) \
+                     * np.exp(1j * E_kin_au * (t1-t_au))        # Note: before any of these fncts are called, E_fin is redefined to also include E_mu
 
 #res_inner_fun = lambda t2: np.exp(-t2 * (np.pi * W_au + 1j*(Er_au))) \
 #                           * IR_during(t2)
 
 if (integ == 'romberg'):                                                        # numerical inner int not possible (res_inner_fun deactivated) ?
-    res_inner = lambda t1: integrate.romberg(res_inner_fun, t1, t_au)
+    res_inner = lambda t1, t_au: integrate.romberg(res_inner_fun, t1, t_au)
 elif (integ == 'quadrature'):
-    res_inner = lambda t1: integrate.quad(res_inner_fun, t1, t_au)[0]
+    res_inner = lambda t1, t_au: integrate.quad(res_inner_fun, t1, t_au)[0]
 elif (integ == 'analytic'):
     # analytic inner integral
-    res_inner = lambda t1: (1./(1j*(E_kin_au + E_fin_au - Er_au - E_lambda)     # See the above note on E_fin also including E_mu
-                                    - np.pi * W_au)
-                            * (np.exp(t_au * (1j*(E_kin_au + E_fin_au
-                                                  - Er_au - E_lambda)
-                                                  - np.pi * W_au))
-                              - np.exp(t1 * (1j*(E_kin_au + E_fin_au
-                                                 - Er_au - E_lambda)
-                                                  - np.pi * W_au)))
-                            * np.exp(-1j*t_au * (E_kin_au + E_fin_au))
-                           )
+    def res_inner(t1,t_au,E_kin_au,E_fin_au,E_lambda,W_au):
+        return (1./(1j*(E_kin_au + E_fin_au - Er_au - E_lambda)     # See the above note on E_fin also including E_mu
+                    - np.pi * W_au)
+                 * (np.exp(t_au * (1j*(E_kin_au + E_fin_au - Er_au - E_lambda)
+                                    - np.pi * W_au))
+                   - np.exp(t1 * (1j*(E_kin_au + E_fin_au - Er_au - E_lambda)
+                                   - np.pi * W_au)))
+                 * np.exp(-1j*t_au * (E_kin_au + E_fin_au))
+                )
 
-res_outer_fun = lambda t1: FX_t1(t1) \
-                           * np.exp(t1 * (np.pi* W_au + 1j*(Er_au + E_lambda))) \
-                           * res_inner(t1)
+def res_outer_fun(t1,t_au,E_kin_au,E_fin_au,E_lambda,W_au):
+    return FX_t1(t1) * np.exp(t1 * (np.pi* W_au + 1j*(Er_au + E_lambda))) \
+                     * res_inner(t1,t_au,E_kin_au,E_fin_au,E_lambda,W_au)
 
 
 # for wavepacket in resonance state
-def t_plus(t):
+def t_plus(t,E_lambda,W_au):
     return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda-1.j*mp.pi*W_au+Omega_au))
-def t_minus(t):
+def t_minus(t,E_lambda,W_au):
     return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda-1.j*mp.pi*W_au-Omega_au))
 
-def gamma_plus(T_up):
-    return ((Er_au+E_lambda-1.j*mp.pi*W_au) * (mp.erf(t_plus(T_up)) \
-                                               - mp.erf(t_plus(-TX_au/2))) \
-            + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_plus(T_up)**2) \
-                                              - mp.exp(-t_plus(-TX_au/2)**2)))
-def gamma_minus(T_up):
-    return ((Er_au+E_lambda-1.j*mp.pi*W_au) * (mp.erf(t_minus(T_up)) \
-                                               - mp.erf(t_minus(-TX_au/2))) \
-            + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_minus(T_up)**2) \
-                                              - mp.exp(-t_minus(-TX_au/2)**2)))
+def gamma_plus(T_up,E_lambda,W_au):
+    return ((Er_au+E_lambda-1.j*mp.pi*W_au) * (mp.erf(t_plus(T_up,E_lambda,W_au)) \
+                                               - mp.erf(t_plus(-TX_au/2,E_lambda,W_au))) \
+            + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_plus(T_up,E_lambda,W_au)**2) \
+                                              - mp.exp(-t_plus(-TX_au/2,E_lambda,W_au)**2)))
+def gamma_minus(T_up,E_lambda,W_au):
+    return ((Er_au+E_lambda-1.j*mp.pi*W_au) * (mp.erf(t_minus(T_up,E_lambda,W_au)) \
+                                               - mp.erf(t_minus(-TX_au/2,E_lambda,W_au))) \
+            + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_minus(T_up,E_lambda,W_au)**2) \
+                                              - mp.exp(-t_minus(-TX_au/2,E_lambda,W_au)**2)))
 
-def wp_res_int(t,T_up):
+def wp_res_int(t,T_up,E_lambda,W_au):
     return (-A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda-1.j*mp.pi*W_au)) \
             * (mp.exp(-sigma**2/2 * (Er_au+E_lambda-1.j*mp.pi*W_au+Omega_au)**2) \
-                * gamma_plus(T_up) \
+                * gamma_plus(T_up,E_lambda,W_au) \
                + mp.exp(-sigma**2/2 * (Er_au+E_lambda-1.j*mp.pi*W_au-Omega_au)**2) \
-                * gamma_minus(T_up)))
+                * gamma_minus(T_up,E_lambda,W_au)))
 
 
 #-------------------------------------------------------------------------
@@ -859,7 +865,8 @@ t_au = -TX_au/2
 
 
 # construct list of energy points
-Ekins = sciconv.hartree_to_ev(np.array(E_min_au, E_max_au, E_step_au))
+Ekins_au = np.arange(E_min_au, E_max_au, E_step_au)
+Ekins_ev = sciconv.hartree_to_ev(Ekins_au)
 
 
 #-------------------------------------------------------------------------
@@ -887,28 +894,34 @@ wp_prefs = [(1.j/(n_res_max+1) * rdg_au * gs_res[0][nlambda] \
 # 'between the pulses' (TX/2, tmax)
 
 #-------------------------------------------------------------------------
-while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
+
+
+def during_first_pulse(idx, t_au):
 #-------------------------------------------------------------------------
-    outfile.write('during the first pulse \n')
+    messages_outfile = []
+    messages_movie   = []
+    messages_pure    = []
+    messages_wp      = []
+
+    messages_outfile.append('during the first pulse \n')
     print('during the first pulse')
 
     outlines = []       # will contain lines containing triples of E_kin, time and signal intensity
     squares = np.array([])  # signal intensity ( = |amplitude|**2 = |J|**2 )
-    E_kin_au = E_min_au
     
     t_s = sciconv.atu_to_second(t_au)
     print('t_s = ', t_s)
-    outfile.write('t_s = ' + str(t_s) + '\n')
-    movie_out.write('"' + format(t_s*1E15, '.3f') + ' fs' + '"' + '\n')
-    cnt = 0     # initialize counter for printing progress
-    if not wavepac_only: 
-        while (E_kin_au <= E_max_au):
-            if (cnt == 4):  # print progress: for each E_kin one '-', but for every fifth one '|' instead
-                print('|', end = '', flush = True)
-                cnt = 0
-            else:
-                print('-', end = '', flush = True)
-                cnt = cnt + 1
+    messages_outfile.append('t_s = ' + str(t_s) + '\n')
+    messages_movie.append('"' + format(t_s*1E15, '.3f') + ' fs' + '"' + '\n')
+#    cnt = 0     # initialize counter for printing progress
+    if not wavepac_only:
+        for E_kin_au in Ekins_au:
+#            if (cnt == 4):  # print progress: for each E_kin one '-', but for every fifth one '|' instead
+#                print('|', end = '', flush = True)
+#                cnt = 0
+#            else:
+#                print('-', end = '', flush = True)
+#                cnt = cnt + 1
             #print(f'{sciconv.hartree_to_ev(E_kin_au):.2} eV')           #?
             #outfile.write(f'{sciconv.hartree_to_ev(E_kin_au):.2} eV\n') #?
             p_au = np.sqrt(2*E_kin_au)
@@ -917,7 +930,6 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                 squares = np.append(squares, 0.)
                 string = in_out.prep_output(0., E_kin_au, t_au)
                 outlines.append(string)
-                E_kin_au = E_kin_au + E_step_au
                 continue
     
             for nmu in range (0, n_fin_max + 1):           # loop over all mu, calculate J_mu = J_dir,mu + J_nondir,mu
@@ -926,11 +938,11 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                 
                 # Direct term
                 if (integ_outer == "quadrature"):
-                    I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_au)
+                    I1 = ci.complex_quadrature(lambda t1: fun_t_dir_1(t1, t_au, E_kin_au, E_fin_au), (-TX_au/2), t_au)
                     dir_J1 = prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
     
                 elif (integ_outer == "romberg"):
-                    I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_au)
+                    I1 = ci.complex_romberg(lambda t1: fun_t_dir_1(t1, t_au, E_kin_au, E_fin_au), (-TX_au/2), t_au)
                     dir_J1 = prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
                  
                 # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
@@ -941,7 +953,7 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                     E_lambda = E_lambdas[nlambda]
                     W_au = W_lambda[nlambda]
                     if (integ_outer == "quadrature"):
-                        res_I = ci.complex_quadrature(res_outer_fun, (-TX_au/2), t_au)
+                        res_I = ci.complex_quadrature(lambda t1: res_outer_fun(t1,t_au,E_kin_au,E_fin_au,E_lambda,W_au), (-TX_au/2), t_au)
         
                         if not partial_GamR == 'exp':
                             res_J1 = (prefac_res1 * res_I[0]
@@ -955,7 +967,7 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                                         * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
     
                     elif (integ_outer == "romberg"):
-                        res_I = ci.complex_romberg(res_outer_fun, (-TX_au/2), t_au)
+                        res_I = ci.complex_romberg(lambda t1: res_outer_fun(t1,t_au,E_kin_au,E_fin_au,E_lambda,W_au), (-TX_au/2), t_au)
                     
                         if not partial_GamR == 'exp':
                             res_J1 = (prefac_res1 * res_I
@@ -990,67 +1002,67 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
             string = in_out.prep_output(sum_square, E_kin_au, t_au)     # returns str: E_kin_eV, t_s, sum_square = intensity
             outlines.append(string)
             
-            E_kin_au = E_kin_au + E_step_au     # @ t = const.
+            # Next E_kin_au @ t = const.
         
         
-        in_out.doout_1f(pure_out, outlines)     # writes each (E_kin, t = const, |J|**2) triple in a sep line into output file
-        in_out.doout_movie(movie_out, outlines)
+        messages_pure.append(in_out.returnout_1f(outlines))     # writes each (E_kin, t = const, |J|**2) triple in a sep line into output file
+        messages_movie.append(in_out.returnout_movie(outlines))
         print()
         max_pos = argrelextrema(squares, np.greater)[0]      # finds position of relative (i. e. local) maxima of |J|**2 in an array
         if (len(max_pos > 0)):                               # if there are such:
             for i in range (0, len(max_pos)):
-                print(Ekins[max_pos[i]], squares[max_pos[i]])      # print all loc max & resp E_kin
-                outfile.write(str(Ekins[max_pos[i]]) + '  ' + str(squares[max_pos[i]]) + '\n')
-    
+                print(Ekins_ev[max_pos[i]], squares[max_pos[i]])      # print all loc max & resp E_kin
+                messages_outfile.append(str(Ekins_ev[max_pos[i]]) + '  ' + str(squares[max_pos[i]]) + '\n')
+
+
     # wavepacket in resonance state(s)
     wp_ampls = []
     for nlambda in range (0,n_res_max+1):
         E_lambda = E_lambdas[nlambda]
         W_au = W_lambda[nlambda]
-        wp_I = wp_res_int(t_au,t_au)
-        wp_pref = wp_prefs[nlambda] 
+        wp_I = wp_res_int(t_au,t_au,E_lambda,W_au)
+        wp_pref = wp_prefs[nlambda]
         wp_ampl = wp_pref * wp_I
         wp_string = format(nlambda, 'd') + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
                 + '   ' + format(complex(wp_ampl), ' .15e')
         wp_ampls.append(wp_string)
-    in_out.doout_1f(wp_res_out, wp_ampls)
+    messages_wp.append(in_out.returnout_1f(wp_ampls))
 
 
-    t_au = t_au + timestep_au
+    return idx, messages_outfile, messages_movie, messages_pure, messages_wp
 
 
 
+def between_pulses(idx, t_au):
 #-------------------------------------------------------------------------
-while (t_au >= TX_au/2\
-#        and (t_au <= (delta_t_au - a))\
-        and (t_au <= tmax_au)):
-#-------------------------------------------------------------------------
-    outfile.write('between the pulses \n')
+    messages_outfile = []
+    messages_movie   = []
+    messages_pure    = []
+    messages_wp      = []
+
+    messages_outfile.append('between the pulses \n')
     print('between the pulses')
-
-    # all equal to during-1st-pulse section, except for integrating over entire XUV pulse now
 
     outlines = []       # will contain lines containing triples of E_kin, time and signal intensity
     squares = np.array([])  # signal intensity ( = |amplitude|**2 = |J|**2 )
-    E_kin_au = E_min_au
     
     t_s = sciconv.atu_to_second(t_au)
     print('t_s = ', t_s)
-    outfile.write('t_s = ' + str(t_s) + '\n')
-    movie_out.write('"' + format(t_s*1E15, '.3f') + ' fs' + '"' + '\n')
-    cnt = 0     # initialize counter for printing progress
-    if not wavepac_only: 
-        while (E_kin_au <= E_max_au):
-            if (cnt == 4):  # print progress: for each E_kin one '-', but for every fifth one '|' instead
-                print('|', end = '', flush = True)
-                cnt = 0
-            else:
-                print('-', end = '', flush = True)
-                cnt = cnt + 1
+    messages_outfile.append('t_s = ' + str(t_s) + '\n')
+    messages_movie.append('"' + format(t_s*1E15, '.3f') + ' fs' + '"' + '\n')
+#    cnt = 0     # initialize counter for printing progress
+    if not wavepac_only:
+        for E_kin_au in Ekins_au:
+#            if (cnt == 4):  # print progress: for each E_kin one '-', but for every fifth one '|' instead
+#                print('|', end = '', flush = True)
+#                cnt = 0
+#            else:
+#                print('-', end = '', flush = True)
+#                cnt = cnt + 1
             #print(f'{sciconv.hartree_to_ev(E_kin_au):.2} eV')           #?
             #outfile.write(f'{sciconv.hartree_to_ev(E_kin_au):.2} eV\n') #?
             p_au = np.sqrt(2*E_kin_au)
-            sum_square = 0      # Total spectrum |J @ E_kin|**2 = sum_mu |J_mu @ E_kin|**2  (sum of contributions of all final states with E_kin)
+            sum_square = 0      # Total spectrum |J @ E_kin|**2 = sum_mu |J_mu @ E_kin|**2  (sum of contributions of all final states with E_kin); for continuous mu: int ~ sum
     
             for nmu in range (0, n_fin_max + 1):           # loop over all mu, calculate J_mu = J_dir,mu + J_nondir,mu
                 E_fin_au = E_fin_au_1 + E_mus[nmu]      # E_fin_au_1: inputted electronic E_fin_au, E_mus: vibrational eigenvalues of fin state
@@ -1058,41 +1070,37 @@ while (t_au >= TX_au/2\
                 
                 # Direct term
                 if (integ_outer == "quadrature"):
-                    I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), TX_au/2)
+                    I1 = ci.complex_quadrature(lambda t1: fun_t_dir_1(t1, t_au, E_kin_au, E_fin_au), (-TX_au/2), TX_au/2)
                     dir_J1 = prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
-    #                    print(nmu, gs_fin[0][nmu], dir_J1)   #?
-        
-                elif (integ_outer == "romberg"):
-                    I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), TX_au/2)
-                    dir_J1 = prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
     
+                elif (integ_outer == "romberg"):
+                    I1 = ci.complex_romberg(lambda t1: fun_t_dir_1(t1, t_au, E_kin_au, E_fin_au), (-TX_au/2), TX_au/2)
+                    dir_J1 = prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
+                 
                 # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
                 J = 0
                 for nlambda in range (0,n_res_max+1):
                     if (fin_pot_type in ('hyperbel','hypfree') and nmu > n_fin_max_list[nlambda]):  # J_nondir,mu,lambda = 0 if repulsive |fin>|mu> lies higher than |res>|lambda>
-    #                    print(nmu, nlambda, 'skipped')  #?
                         continue
                     E_lambda = E_lambdas[nlambda]
                     W_au = W_lambda[nlambda]
                     if (integ_outer == "quadrature"):
-                        res_I = ci.complex_quadrature(res_outer_fun, (-TX_au/2), TX_au/2)
-                        
-                        if not partial_GamR == 'exp':
-                            res_J1 = (prefac_res1 * res_I[0]
-                                      * gs_res[0][nlambda] * res_fin[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I[0]
-                                        * indir_FCsums[nlambda] * res_fin[nlambda][nmu])
-    #                        print(nmu, nlambda, 'res_J1 =', res_J1, 'indir_J1 =', indir_J1)   #?
-                        else:
-                            res_J1 = (prefac_res1 * res_I[0]
-                                      * gs_res[0][nlambda] * res_fin_woVR[nlambda][nmu])
-                            indir_J1 = (prefac_indir1 * res_I[0]
-                                        * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
-    #                        print(nmu, nlambda, 'res_J1 =', res_J1, 'indir_J1 =', indir_J1)   #?
+                        res_I = ci.complex_quadrature(lambda t1: res_outer_fun(t1,t_au,E_kin_au,E_fin_au,E_lambda,W_au), (-TX_au/2), TX_au/2)
         
+                        if not partial_GamR == 'exp':
+                            res_J1 = (prefac_res1 * res_I[0]
+                                      * gs_res[0][nlambda] * res_fin[nlambda][nmu])
+                            indir_J1 = (prefac_indir1 * res_I[0]
+                                        * indir_FCsums[nlambda] * res_fin[nlambda][nmu])
+                        else:
+                            res_J1 = (prefac_res1 * res_I[0]
+                                      * gs_res[0][nlambda] * res_fin_woVR[nlambda][nmu])
+                            indir_J1 = (prefac_indir1 * res_I[0]
+                                        * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
+    
                     elif (integ_outer == "romberg"):
-                        res_I = ci.complex_romberg(res_outer_fun, (-TX_au/2), TX_au/2)
-                        
+                        res_I = ci.complex_romberg(lambda t1: res_outer_fun(t1,t_au,E_kin_au,E_fin_au,E_lambda,W_au), (-TX_au/2), TX_au/2)
+                    
                         if not partial_GamR == 'exp':
                             res_J1 = (prefac_res1 * res_I
                                       * gs_res[0][nlambda] * res_fin[nlambda][nmu])
@@ -1103,8 +1111,7 @@ while (t_au >= TX_au/2\
                                       * gs_res[0][nlambda] * res_fin_woVR[nlambda][nmu])
                             indir_J1 = (prefac_indir1 * res_I
                                         * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
-    
-    
+        
                     J = (J
                          + res_J1
                          + indir_J1
@@ -1127,33 +1134,49 @@ while (t_au >= TX_au/2\
             string = in_out.prep_output(sum_square, E_kin_au, t_au)     # returns str: E_kin_eV, t_s, sum_square = intensity
             outlines.append(string)
             
-            E_kin_au = E_kin_au + E_step_au     # @ t = const.
+            # Next E_kin_au @ t = const.
         
         
-        in_out.doout_1f(pure_out, outlines)     # writes each (E_kin, t = const, |J|**2) triple in a sep line into output file
-        in_out.doout_movie(movie_out, outlines)
+        messages_pure.append(in_out.returnout_1f(outlines))     # writes each (E_kin, t = const, |J|**2) triple in a sep line into output file
+        messages_movie.append(in_out.returnout_movie(outlines))
         print()
         max_pos = argrelextrema(squares, np.greater)[0]      # finds position of relative (i. e. local) maxima of |J|**2 in an array
         if (len(max_pos > 0)):                               # if there are such:
             for i in range (0, len(max_pos)):
-                print(Ekins[max_pos[i]], squares[max_pos[i]])      # print all loc max & resp E_kin
-                outfile.write(str(Ekins[max_pos[i]]) + '  ' + str(squares[max_pos[i]]) + '\n')
-    
+                print(Ekins_ev[max_pos[i]], squares[max_pos[i]])      # print all loc max & resp E_kin
+                messages_outfile.append(str(Ekins_ev[max_pos[i]]) + '  ' + str(squares[max_pos[i]]) + '\n')
+
+
     # wavepacket in resonance state(s)
     wp_ampls = []
     for nlambda in range (0,n_res_max+1):
         E_lambda = E_lambdas[nlambda]
         W_au = W_lambda[nlambda]
-        wp_I = wp_res_int(t_au,TX_au/2)
-        wp_pref = wp_prefs[nlambda] 
+        wp_I = wp_res_int(t_au,TX_au/2,E_lambda,W_au)
+        wp_pref = wp_prefs[nlambda]
         wp_ampl = wp_pref * wp_I
         wp_string = format(nlambda, 'd') + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
                 + '   ' + format(complex(wp_ampl), ' .15e')
         wp_ampls.append(wp_string)
-    in_out.doout_1f(wp_res_out, wp_ampls)
+    messages_wp.append(in_out.returnout_1f(wp_ampls))
 
 
-    t_au = t_au + timestep_au
+    return idx, messages_outfile, messages_movie, messages_pure, messages_wp
+
+ts_au = np.arange(-TX_au/2, min(TX_au/2, tmax_au), timestep_au)
+messages = joblib.Parallel(n_jobs=-1)(joblib.delayed(during_first_pulse)(idx, t_au) for idx, t_au in enumerate(ts_au))
+outfile.writelines(flatten([block[1] for block in messages]))
+movie_out.writelines(flatten([block[2] for block in messages]))
+pure_out.writelines(flatten([block[3] for block in messages]))
+wp_res_out.writelines(flatten([block[4] for block in messages]))
+
+ts_au = np.arange(ts_au[-1]+timestep_au, tmax_au, timestep_au)
+messages = joblib.Parallel(n_jobs=-1)(joblib.delayed(between_pulses)(idx, t_au) for idx, t_au in enumerate(ts_au))
+outfile.writelines(flatten([block[1] for block in messages]))
+movie_out.writelines(flatten([block[2] for block in messages]))
+pure_out.writelines(flatten([block[3] for block in messages]))
+wp_res_out.writelines(flatten([block[4] for block in messages]))
+
 
 
 

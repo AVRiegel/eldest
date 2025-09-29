@@ -806,3 +806,13 @@ def doout_movie(filename, outlines):
     res_lines = '\n'.join(outlines)
     res_lines = res_lines + '\n' + '' + '\n' + '' + '\n'
     filename.write(res_lines)
+
+def returnout_1f(outlines):
+    res_lines = '\n'.join(outlines)
+    res_lines = res_lines + '\n' + '' + '\n'
+    return res_lines
+
+def returnout_movie(outlines):
+    res_lines = '\n'.join(outlines)
+    res_lines = res_lines + '\n' + '' + '\n' + '' + '\n'
+    return res_lines
