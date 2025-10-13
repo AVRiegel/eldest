@@ -52,21 +52,21 @@ def read_input(inputfile, outfile):
     FWHM_L       = 500E-18
     #
     # parameters of the simulation
-    tmax_s        = 2.5E-15       # simulate until time tmax in s
-    timestep_s    = 0.5E-16       # evaluate expression every timestep_s seconds
-    E_step_eV     = 1.00          # energy difference between different evaluated electron kinetic energies 
+    tmax_s        = 2.5E-15          # simulate until time tmax in s
+    timestep_s    = 0.5E-16          # evaluate expression every timestep_s seconds
     #
     E_min_eV      =  30.0
     E_max_eV      =  50.0
+    E_step_eV     =  1.00            # energy difference between different evaluated electron kinetic energies
     #
-    integ         = "analytic"    # options: analytic, (quadrature, romberg - both currently unavailable)  
-    integ_outer   = "romberg"     # options: quadrature, romberg
-    Gamma_type    = "const"       # options: const, R6, exp
+    integ         = "analytic"       # options: analytic, (quadrature, romberg - both currently unavailable)
+    integ_outer   = "quadrature"     # options: quadrature, romberg
+    Gamma_type    = "const"          # options: const, R6, external
     #
-    fc_precalc    = "False"       #
-    partial_GamR  = "None"        # options: None, pre, exp
-    part_fc_pre   = "False"       #
-    wavepac_only  = "False"       #
+    fc_precalc    = False            # use file with pre-calculated "Franck-Condon overlap integrals" for gs-fin and res-fin, flag -f
+    partial_GamR  = None             # options: None, pre, exp (i. e. use Gamma-of-R dependence everywhere / only in prefactors / only in Wl)
+    part_fc_pre   = False            # use file with pre-calculated FC overlap integrals without Gamma-of-R dependence, flag -F
+    wavepac_only  = False            # calculate only the resonance-state projections, skip final-state projections'
     #
     # parameters for the nuclear dynamics
     mass1         = 20.1797       # in g/mol
@@ -80,10 +80,11 @@ def read_input(inputfile, outfile):
     gs_Req     = 0
     gs_const   = 47.6930
     # resonance-state parameters
-    res_de     = -33.179112
-    res_a      = 1.930064
-    res_Req    = 37.757254
-    res_const  = 47.6930
+    res_a         = 0.0183747        # for morse: res_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)                                                    
+    res_b         = 15.3994          # for morse: res_a; for hyperbel or hypfree: V_b in au (Hartree)
+    res_c         = 6.0              # for morse: res_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (res_a/R_start) in au (Bohr)
+    res_d         = 0.0              # for morse: res_const; for hyperbel or hypfree: FC factor threshold for calculating the trs integral
+    res_pot_type  = 'morse'          # options: morse, hyperbel, hypfree
     # final-state parameters
     fin_a      = -15.869110       # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
     fin_b      = 1.659155         # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)
@@ -317,6 +318,7 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'wavepac_only'):
             wavepac_only = True if words[2].lower() == 'true' else False
 
+    # vibrational-states parameters
         elif (words[0] == 'gs_de'):
             outfile.write('Parameters of potential energy curves:' + '\n')
             gs_de = float(words[2])
@@ -330,18 +332,24 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'gs_const'):
             gs_const = float(words[2])
             outfile.write('gs_const = ' + str(gs_const) + '\n')
-        elif (words[0] == 'res_de'):
-            res_de = float(words[2])
-            outfile.write('res_de = ' + str(res_de) + '\n')
         elif (words[0] == 'res_a'):
             res_a = float(words[2])
             outfile.write('res_a = ' + str(res_a) + '\n')
-        elif (words[0] == 'res_Req'):
-            res_Req = float(words[2])
-            outfile.write('res_Req = ' + str(res_Req) + '\n')
-        elif (words[0] == 'res_const'):
-            res_const = float(words[2])
-            outfile.write('res_const = ' + str(res_const) + '\n')
+        elif (words[0] == 'res_b'):
+            res_b = float(words[2])
+            outfile.write('res_b = ' + str(res_b) + '\n')
+        elif (words[0] == 'res_c'):
+            res_c = float(words[2])
+            outfile.write('res_c = ' + str(res_c) + '\n')
+        elif (words[0] == 'res_d'):
+            res_d = float(words[2])
+            outfile.write('res_d = ' + str(res_d) + '\n')
+        elif (words[0] == 'res_pot_type'):
+            res_pot_type = str(words[2])
+            outfile.write('res_pot_type = ' + str(res_pot_type) + '\n')
+            if (res_pot_type not in ['morse','hyperbel', 'hypfree']):
+                print('Non-existent resonance-state-potential type chosen, QUIT')
+                sys.exit()
         elif (words[0] == 'fin_a'):
             fin_a = float(words[2])
             outfile.write('fin_a = ' + str(fin_a) + '\n')
@@ -358,7 +366,7 @@ def read_input(inputfile, outfile):
             fin_pot_type = str(words[2])
             outfile.write('fin_pot_type = ' + str(fin_pot_type) + '\n')
             if (fin_pot_type not in ['morse','hyperbel', 'hypfree']):
-                print('Non-existent final state potential type chosen, QUIT')
+                print('Non-existent final-state-potential type chosen, QUIT')
                 sys.exit()
     
     f.close()
@@ -373,7 +381,7 @@ def read_input(inputfile, outfile):
             fc_precalc, partial_GamR, part_fc_pre, wavepac_only,
             mass1, mass2, grad_delta, R_eq_AA,
             gs_de, gs_a, gs_Req, gs_const,
-            res_de, res_a, res_Req, res_const,
+            res_a, res_b, res_c, res_d, res_pot_type,
             fin_a, fin_b, fin_c, fin_d, fin_pot_type
             )
 

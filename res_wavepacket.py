@@ -68,8 +68,12 @@ else:
 
 with open(os.devnull, 'w') as dummyfile, silence_print():
     (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-     _, _, _, _, _, _, _, _, _, _, _, _, mass1, mass2, _, _, _, _, _, _, De, alpha, Req, _, _, _, _, _, _
+     _, _, _, _, _, _, _, _, _, _, _, _, mass1, mass2, _, _, _, _, _, _, De, alpha, Req, _, res_pot_type, _, _, _, _, _
      ) = in_out.read_input(settings, dummyfile)
+
+if not res_pot_type == 'morse':
+    sys.exit('Only available for Morse potential as resonance-state potential at the moment.')
+
 
 outfile=f'wf_{infile}'
 

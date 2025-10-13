@@ -52,17 +52,18 @@ mass1         = 20.1797          # in g/mol
 mass2         = 20.1797          # in g/mol
 grad_delta    = 0.001
 R_eq_AA       = 3.08
-# vibrational states parameters  # provide everything in au (de in Hartree, a in inverse Bohr, Req in Bohr)
+# vibrational-states parameters  # provide everything in au (de in Hartree, a in inverse Bohr, Req in Bohr)
 # ground-state parameters
 gs_de         = 0.0001102
 gs_a          = 1.5
 gs_Req        = 6.0
 gs_const      = 0.0
 # resonance-state parameters
-res_de        = 0.0183747
-res_a         = 15.3994
-res_Req       = 6.0
-res_const     = 0.0
+res_a         = 0.0183747        # for morse: res_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)                                                    
+res_b         = 15.3994          # for morse: res_a; for hyperbel or hypfree: V_b in au (Hartree)
+res_c         = 6.0              # for morse: res_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (res_a/R_start) in au (Bohr)
+res_d         = 0.0              # for morse: res_const; for hyperbel or hypfree: FC factor threshold for calculating the trs integral
+res_pot_type  = morse            # options: morse, hyperbel, hypfree
 # final-state parameters
 fin_a         = 0.0833354        # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
 fin_b         = 1.4699729        # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)

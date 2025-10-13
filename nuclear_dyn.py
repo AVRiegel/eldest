@@ -119,7 +119,7 @@ Xshape = 'convoluted'
  fc_precalc, partial_GamR, part_fc_pre, wavepac_only,
  mass1, mass2, grad_delta, R_eq_AA,
  gs_de, gs_a, gs_Req, gs_const,
- res_de, res_a, res_Req, res_const,
+ res_a, res_b, res_c, res_d, res_pot_type,
  fin_a, fin_b, fin_c, fin_d, fin_pot_type
  ) = in_out.read_input(infile, outfile)
 
@@ -245,7 +245,7 @@ elif Gamma_type == 'R6':
         VEr_au_woVR = VEr_au
         print('VEr_au = ', VEr_au)
         outfile.write('VEr_au = ' + str(VEr_au) + '\n')
-    VEr_au = VEr_au*res_Req**3                            # adjusts VEr_au by the R dependent factor
+    VEr_au = VEr_au*res_c**3                            # adjusts VEr_au by the R dependent factor
     print('VEr_au_adjusted = ', VEr_au)
     outfile.write('VEr_au_adjusted = ' + str(VEr_au) + '\n')
 elif Gamma_type == 'external':
@@ -288,20 +288,58 @@ for n in range (0,n_gs_max+1):
 print()
 print("Resonance state")
 print('-----------------------------------------------------------------')
-print("Energies of vibrational states of the resonance state")
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
-outfile.write("Energies of vibrational states of the resonance state" + '\n')
-lambda_param_res = np.sqrt(2*red_mass*res_de) / res_a
-n_res_max = int(lambda_param_res - 0.5)
-print("n_res_max = ", n_res_max)
-E_lambdas = []
-outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
-print('n_res  ' + 'E [au]            ' + 'E [eV]')
-for n in range (0,n_res_max+1):
-    ev = wf.eigenvalue(n,res_de,res_a,red_mass)
-    E_lambdas.append(ev)
-    outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
-    print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+
+if (res_pot_type == 'morse'):
+    print("Energies of vibrational states of the resonance state")
+    outfile.write("Energies of vibrational states of the resonance state" + '\n')
+    res_de    = res_a
+    res_a     = res_b
+    res_Req   = res_c
+    res_const = res_d
+    lambda_param_res = np.sqrt(2*red_mass*res_de) / res_a
+    n_res_max = int(lambda_param_res - 0.5)     # Maximum quantum number = n_res_max -> number of states = n_res_max + 1
+    print("n_res_max = ", n_res_max)
+    E_lambdas = []
+    print('n_res  ' + 'E [au]            ' + 'E [eV]')
+    outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
+    for n in range (0,n_res_max+1):
+        ev = wf.eigenvalue(n,res_de,res_a,red_mass)
+        E_lambdas.append(ev)
+        outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
+        print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+elif (res_pot_type in ('hyperbel','hypfree')):
+    print('Resonance state is repulsive')
+    outfile.write('Resonance state is repulsive' + '\n')
+    res_hyp_a = res_a
+    res_hyp_b = res_b
+    E_res_au = res_hyp_b        # Since for an all-repulsive state there is no minimum (E_res), E_res is set to the final potential at infinite distance, i.e. res_hyp_b
+    E_res_au_1 = res_hyp_b
+    R_hyp_step_res = res_c      # (If both res and fin are repulsive, both will be advanced in lockstep but with their individual step widths)
+    threshold_res = res_d       # If, coming from high lambda, for a certain lambda all |<lambda|kappa>| and |<lambda|mu>| are < threshold, don't calc FCF and integrals for all lambda < that lambda
+    E_lambdas = []
+    R_start_EX_max_res = res_hyp_a / (EX_max_au - res_hyp_b)        # R_start of hyperbola corresponding to EX_max_au, used as minimum starting point for discretizing resonance vibr states
+    outfile.write('Continuous vibrational states of the resonance state are discretized:\n')
+    outfile.write('Energy of highest possibly considered vibrational state\n of the resonance state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...\n'.format(
+        sciconv.hartree_to_ev(EX_max_au - res_hyp_b),
+        sciconv.hartree_to_ev(res_hyp_a / R_start_EX_max_res  -  res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)),
+        sciconv.hartree_to_ev(res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)  - res_hyp_a / (R_start_EX_max_res + 2 * R_hyp_step_res)) ))
+    outfile.write('Each E_lambda is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A\n'.format(
+        res_hyp_a, R_start_EX_max_res, sciconv.bohr_to_angstrom(R_start_EX_max_res), R_hyp_step_res, sciconv.bohr_to_angstrom(R_hyp_step_res) ))
+    print('Continuous vibrational states of the resonance state are discretized:')
+    print('Energy of highest possibly considered vibrational state\n of the resonance state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...'.format(
+        sciconv.hartree_to_ev(EX_max_au - res_hyp_b),
+        sciconv.hartree_to_ev(res_hyp_a / R_start_EX_max_res  -  res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)),
+        sciconv.hartree_to_ev(res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)  - res_hyp_a / (R_start_EX_max_res + 2 * R_hyp_step_res)) ))
+    print('Each E_lambda is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A'.format(
+        res_hyp_a, R_start_EX_max_res, sciconv.bohr_to_angstrom(R_start_EX_max_res), R_hyp_step_res, sciconv.bohr_to_angstrom(R_hyp_step_res) ))
+
+
+
+
+
+
+
 
 #final state
 print()
@@ -336,21 +374,21 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
     R_hyp_step = fin_c
     threshold = fin_d   # If, coming from high mu, for a certain mu all |<mu|kappa>| and |<mu|lambda>| are < threshold, don't calc FCF and integrals for all mu < that mu
     E_mus = []
-    R_start_EX_max = fin_hyp_a / (EX_max_au - fin_hyp_b)        # R_start of hyperbola corresponding to EX_max_au, used as minimum starting point for discretizing final vibr states
+    R_start_EX_max_fin = fin_hyp_a / (EX_max_au - fin_hyp_b)        # R_start of hyperbola corresponding to EX_max_au, used as minimum starting point for discretizing final vibr states
     outfile.write('Continuous vibrational states of the final state are discretized:\n')
     outfile.write('Energy of highest possibly considered vibrational state\n of the final state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...\n'.format(
         sciconv.hartree_to_ev(EX_max_au - fin_hyp_b),
-        sciconv.hartree_to_ev(fin_hyp_a / R_start_EX_max  -  fin_hyp_a / (R_start_EX_max + R_hyp_step)),
-        sciconv.hartree_to_ev(fin_hyp_a / (R_start_EX_max + R_hyp_step)  - fin_hyp_a / (R_start_EX_max + 2 * R_hyp_step)) ))
+        sciconv.hartree_to_ev(fin_hyp_a / R_start_EX_max_fin  -  fin_hyp_a / (R_start_EX_max_fin + R_hyp_step)),
+        sciconv.hartree_to_ev(fin_hyp_a / (R_start_EX_max_fin + R_hyp_step)  - fin_hyp_a / (R_start_EX_max_fin + 2 * R_hyp_step)) ))
     outfile.write('Each E_mu is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A\n'.format(
-        fin_hyp_a, R_start_EX_max, sciconv.bohr_to_angstrom(R_start_EX_max), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
+        fin_hyp_a, R_start_EX_max_fin, sciconv.bohr_to_angstrom(R_start_EX_max_fin), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
     print('Continuous vibrational states of the final state are discretized:')
     print('Energy of highest possibly considered vibrational state\n of the final state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...'.format(
         sciconv.hartree_to_ev(EX_max_au - fin_hyp_b),
-        sciconv.hartree_to_ev(fin_hyp_a / R_start_EX_max  -  fin_hyp_a / (R_start_EX_max + R_hyp_step)),
-        sciconv.hartree_to_ev(fin_hyp_a / (R_start_EX_max + R_hyp_step)  - fin_hyp_a / (R_start_EX_max + 2 * R_hyp_step)) ))
+        sciconv.hartree_to_ev(fin_hyp_a / R_start_EX_max_fin  -  fin_hyp_a / (R_start_EX_max_fin + R_hyp_step)),
+        sciconv.hartree_to_ev(fin_hyp_a / (R_start_EX_max_fin + R_hyp_step)  - fin_hyp_a / (R_start_EX_max_fin + 2 * R_hyp_step)) ))
     print('Each E_mu is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A'.format(
-        fin_hyp_a, R_start_EX_max, sciconv.bohr_to_angstrom(R_start_EX_max), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
+        fin_hyp_a, R_start_EX_max_fin, sciconv.bohr_to_angstrom(R_start_EX_max_fin), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
 
 #-------------------------------------------------------------------------
 # Franck-Condon factors
@@ -455,11 +493,11 @@ if not args.fc:                 # If, however, an FC input file is provided, FC 
     #                      * V_of_R(R))
     # elif fin_pot_type == 'hypfree':
     #    func = lambda R: (np.conj(wf.psi_n(R,0,res_a,res_Req,red_mass,res_de))
-    #                      * wf.psi_freehyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max)
+    #                      * wf.psi_freehyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max_fin)
     #                      * V_of_R(R))
     # elif fin_pot_type == 'hyperbel':
     #    func = lambda R: (np.conj(wf.psi_n(R,0,res_a,res_Req,red_mass,res_de))
-    #                      * wf.psi_hyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max)
+    #                      * wf.psi_hyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max_fin)
     #                      * V_of_R(R))
     # tmp = np.zeros(2)
     # while abs(tmp[0]) <= (1000*tmp[1]):                 # checks if the test integral is at least three orders of magnitude larger than the estimated error
@@ -520,7 +558,7 @@ if (fin_pot_type == 'morse'):
 elif (fin_pot_type in ('hyperbel','hypfree')):
     if args.fc:            # If an FC input file is provided, read in the FC integrals from it and skip their calculation
         gs_res, gs_fin, res_fin, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
-        R_start = R_start_EX_max        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
+        R_start = R_start_EX_max_fin        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
         for m in range(0,n_fin_max_X+1):
             E_mu = fin_hyp_a / R_start
             E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
@@ -541,13 +579,13 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
     else:
         FCfunc = wf.mp_FCmor_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FCmor_freehyp
         Req_max = max(gs_Req, res_Req)
-        R_start = R_start_EX_max        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
+        R_start = R_start_EX_max_fin        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
         thresh_flag = -1                # Initialize flag for FC-calc stop. Counts how often in a (mu) row all FC fall below threshold
         while (thresh_flag < 3):        # Stop FC calc if all |FC| < threshold for 3 consecutive mu
             E_mu = fin_hyp_a / R_start
             E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
-            print(f'--- R_start = {R_start:7.4f} au = {sciconv.bohr_to_angstrom(R_start):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start - R_start_EX_max) / R_hyp_step  + 0.1)}')    #?
-    #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_mu = {E_mu:5.5f} au = {sciconv.hartree_to_ev(E_mu):5.5f} eV, steps: {int((R_start - R_start_EX_max) / R_hyp_step  + 0.1)}\n')  #?
+            print(f'--- R_start = {R_start:7.4f} au = {sciconv.bohr_to_angstrom(R_start):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start - R_start_EX_max_fin) / R_hyp_step  + 0.1)}')    #?
+    #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_mu = {E_mu:5.5f} au = {sciconv.hartree_to_ev(E_mu):5.5f} eV, steps: {int((R_start - R_start_EX_max_fin) / R_hyp_step  + 0.1)}\n')  #?
             for k in range(0,n_gs_max+1):
                 FC = FCfunc(k,gs_a,gs_Req,gs_de,red_mass,
                             fin_hyp_a,fin_hyp_b,R_start,R_min,R_max)
