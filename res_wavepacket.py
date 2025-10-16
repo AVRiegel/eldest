@@ -31,13 +31,6 @@ def silence_print():
         finally:
             sys.stdout = old_stdout
 
-#######################################
-# Prepare array with R values
-R_low = 5.8
-R_hig = 6.8
-R_len = 2**7 + 1
-R_arr = np.linspace(R_low,R_hig,R_len)
-#######################################
 
 # set up argument parser
 parser = argparse.ArgumentParser(
@@ -49,6 +42,10 @@ parser.add_argument('-w', '--wavepacket_infile', default='wp_res.dat',
                     help='File which contains the projections of the wavefunction on the vibronic resonance states.')
 parser.add_argument('-s', '--settings_infile', default='photonucl.in',
                     help='File which includes the simulation settings, potential parameters etc.')
+parser.add_argument('-r', '--r_lims', nargs=3, default=[5.8, 6.8, 7], metavar=('R_low', 'R_high', 'R_num_exp'),
+                    help='Lower and upper limit for R (in a.u.) as well as exponent for number of points with num = 2**R_num_exp + 1.')
+parser.add_argument('-t', '--time_lims', nargs=2, default=[-1.2, 100.], metavar=('t_low', 't_up'),
+                    help='Iterable with lower and upper limit for time t (in fs).')
 args = parser.parse_args()
 
 
@@ -72,6 +69,19 @@ with open(os.devnull, 'w') as dummyfile, silence_print():
      ) = in_out.read_input(settings, dummyfile)
 
 outfile=f'wf_{infile}'
+
+
+# prepare array with R values and set time limits
+R_low, R_high, R_num_exp = [float(num) for num in args.r_lims]
+if (R_num_exp.is_integer() and R_num_exp > 0):
+    R_len = 2**int(R_num_exp) + 1
+else:
+    sys.exit('R_num_exp must be positive integer.')
+
+R_arr = np.linspace(R_low, R_high, R_len)
+
+t_low, t_high = [float(num) for num in args.time_lims]
+
 
 
 ##########
@@ -118,7 +128,7 @@ np.savetxt(outfile, oata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15
 outfile_pm3d=f'pm3d_{outfile}'
 eata = oata[-len(sata[0])//N_lambda:]
 np.savetxt(outfile_pm3d, eata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15e'])
-subprocess.call(['sed', '-i', f'/{R_hig:10.7f}/G', outfile_pm3d])
+subprocess.call(['sed', '-i', f'/{R_high:10.7f}/G', outfile_pm3d])
 
 popfile=f'pop_{infile}'
 pop = pd.DataFrame() 
@@ -148,9 +158,9 @@ g.set(terminal = "postscript enhanced color size 30cm,15cm font 'Helvetica,26' l
       xlabel = "'R (a.u.)'",
       ylabel = "'t (fs)'",
       zlabel = "'P (a.u.)'",
-      xrange = f"[{R_low}:{R_hig}]",
+      xrange = f"[{R_low}:{R_high}]",
 #      xrange = "[5.8:6.8]",
-      yrange = "[-1.2:100]",
+      yrange = f"[{t_low}:{t_high}]",
       key = None,
       view = "map",
       size = "ratio 0.5 0.8,1")
