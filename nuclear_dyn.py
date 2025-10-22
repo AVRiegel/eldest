@@ -131,6 +131,12 @@ movie_out = open('movie.dat' if not wavepac_only else devnull, mode='w')
 #popfile = open("pop.dat", mode='w')
 wp_res_out = open('wp_res.dat', mode='w')
 
+def close_files():
+    outfile.close
+    pure_out.close
+    movie_out.close
+    wp_res_out.close
+
 if fc_precalc:
     print('The Franck-Condon overlap integrals are read from file: ' + str(args.fc))
     outfile.write('The Franck-Condon overlap integrals are read from file: ' + str(args.fc) + '\n')
@@ -367,58 +373,31 @@ for l in range(0,n_res_max+1):
     res_fin.append(list())
 
 if not fc_precalc and args.fc:
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! FC input file was provided without being requested. Programme terminated.')
 elif fc_precalc and not args.fc:
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! FC input file was requested but not provided. Programme terminated.')
 elif not (Gamma_type == 'external') and args.gamma:
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! Gamma-R-dependence file was provided although Gamma_type is not "external". Programme terminated.')
 elif (Gamma_type == 'external') and not args.fc and not args.gamma:
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! Gamma_type is "external" but no additional input file was provided. Programme terminated.')
 elif args.fc and args.gamma:
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! FC input file and Gamma-R-dependence file were provided at the same time. Programme terminated.')
 elif not part_fc_pre and args.FC:
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! FC input file for partial Gamma-R dependence was provided without being requested. Programme terminated.')
 elif part_fc_pre and not args.FC:
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! FC input file for partial Gamma-R dependence was requested but not provided. Programme terminated.')
 elif part_fc_pre and not partial_GamR:
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! FC input file for partial Gamma-R dependence was requested although no such treatment was requested. Programme terminated.')
 elif partial_GamR and ((args.fc and not args.FC) or (args.FC and not args.fc)):   # If partial_GamR but -f and -F not either both present or both absent, throw error (FC calc code would have to be changed)  
-    outfile.close
-    pure_out.close
-    movie_out.close
-    wp_res_out.close
+    close_files()
     sys.exit('!!! If partial_GamR is requested, then either both or none of the additional FC input files with (-f) and without (-F) Gamma-R dependence must be provided at the moment. Programme terminated.')
 
 
@@ -494,10 +473,7 @@ if (fin_pot_type == 'morse'):
             gs_res_woVR, gs_fin_woVR, res_fin_woVR, _, _ = in_out.read_fc_input(args.FC)
             if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and len(res_fin) == len(res_fin_woVR)):
                 outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                outfile.close
-                pure_out.close
-                movie_out.close
-                wp_res_out.close
+                close_files()
                 sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
     else:
         for m in range(0,n_fin_max+1):
@@ -532,10 +508,7 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
                     and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
                 outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
                               + ", max_X: " + str(n_fin_max_X_woVR == n_fin_max_X) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                outfile.close
-                pure_out.close
-                movie_out.close
-                wp_res_out.close
+                close_files()
                 sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
 
     else:
@@ -1176,7 +1149,4 @@ print(str(dt_end))
 outfile.write('\n' + str(dt_end) + '\n')
 outfile.write('Total runtime:' + ' ' + str(dt_end - dt_start))
 
-outfile.close
-pure_out.close
-movie_out.close
-wp_res_out.close
+close_files()
