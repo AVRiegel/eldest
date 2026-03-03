@@ -828,26 +828,26 @@ res_outer_fun = lambda t1: FX_t1(t1) \
 
 # for wavepacket in resonance state
 def t_plus(t):
-    return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda-1.j*mp.pi*W_au+Omega_au))
+    return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au))
 def t_minus(t):
-    return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda-1.j*mp.pi*W_au-Omega_au))
+    return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au))
 
 def gamma_plus(T_up):
-    return ((Er_au+E_lambda-1.j*mp.pi*W_au) * (mp.erf(t_plus(T_up)) \
+    return ((Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au) * (mp.erf(t_plus(T_up)) \
                                                - mp.erf(t_plus(-TX_au/2))) \
             + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_plus(T_up)**2) \
                                               - mp.exp(-t_plus(-TX_au/2)**2)))
 def gamma_minus(T_up):
-    return ((Er_au+E_lambda-1.j*mp.pi*W_au) * (mp.erf(t_minus(T_up)) \
+    return ((Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au) * (mp.erf(t_minus(T_up)) \
                                                - mp.erf(t_minus(-TX_au/2))) \
             + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_minus(T_up)**2) \
                                               - mp.exp(-t_minus(-TX_au/2)**2)))
 
 def wp_res_int(t,T_up):
-    return (-A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda-1.j*mp.pi*W_au)) \
-            * (mp.exp(-sigma**2/2 * (Er_au+E_lambda-1.j*mp.pi*W_au+Omega_au)**2) \
+    return (-A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au)) \
+            * (mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au)**2) \
                 * gamma_plus(T_up) \
-               + mp.exp(-sigma**2/2 * (Er_au+E_lambda-1.j*mp.pi*W_au-Omega_au)**2) \
+               + mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au)**2) \
                 * gamma_minus(T_up)))
 
 
@@ -884,7 +884,7 @@ else:
 if (fin_pot_type in ('hyperbel','hypfree')):
     n_fin_max = n_fin_max_X
 
-# for wavepacket in resonance state(s)
+# for wavepacket in resonance state(s) (as list comprehension)
 wp_prefs = [(1.j/(n_res_max+1) * rdg_au * gs_res[0][nlambda] \
                + mp.pi/(n_res_max+1) * VEr_au * cdg_au_V * indir_FCsums[nlambda])
             for nlambda in range(n_res_max+1)]
@@ -1020,12 +1020,14 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
     for nlambda in range (0,n_res_max+1):
         E_lambda = E_lambdas[nlambda]
         W_au = W_lambda[nlambda]
-        wp_I = wp_res_int(t_au,t_au)
         wp_pref = wp_prefs[nlambda] 
-        wp_ampl = wp_pref * wp_I
-        wp_string = format(nlambda, 'd') + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
-                + '   ' + format(complex(wp_ampl), ' .15e')
-        wp_ampls.append(wp_string)
+        E_p_au = Ep_min_au
+        while (E_p_au <= Ep_max_au):
+            wp_I = wp_res_int(t_au,t_au)
+            wp_ampl = wp_pref * wp_I
+            wp_string = format(nlambda, 'd') + '   ' + format(sciconv.hartree_to_ev(E_p_au), '>8.5f') + '   ' + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
+                    + '   ' + format(complex(wp_ampl), ' .15e')
+            wp_ampls.append(wp_string)
     in_out.doout_1f(wp_res_out, wp_ampls)
 
 
@@ -1161,12 +1163,14 @@ while (t_au >= TX_au/2\
     for nlambda in range (0,n_res_max+1):
         E_lambda = E_lambdas[nlambda]
         W_au = W_lambda[nlambda]
-        wp_I = wp_res_int(t_au,TX_au/2)
         wp_pref = wp_prefs[nlambda] 
-        wp_ampl = wp_pref * wp_I
-        wp_string = format(nlambda, 'd') + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
-                + '   ' + format(complex(wp_ampl), ' .15e')
-        wp_ampls.append(wp_string)
+        E_p_au = Ep_min_au
+        while (E_p_au <= Ep_max_au):
+            wp_I = wp_res_int(t_au,TX_au/2)
+            wp_ampl = wp_pref * wp_I
+            wp_string = format(nlambda, 'd') + '   ' + format(sciconv.hartree_to_ev(E_p_au), '>8.5f') + '   ' + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
+                    + '   ' + format(complex(wp_ampl), ' .15e')
+            wp_ampls.append(wp_string)
     in_out.doout_1f(wp_res_out, wp_ampls)
 
 
