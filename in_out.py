@@ -18,6 +18,9 @@ import sys
 def read_input(inputfile, outfile):
 #-------------------------------------------------------------------------
     # define default parameters
+    # process: ICD or RICD
+    prc          = "RICD"         # options: ICD, RICD
+    #
     # transitions dipole moments
     rdg_au       = 0.3            # transition dipole moment into the resonance state
     cdg_au       = 0.9            # transition dipole moment into any continuum state
@@ -55,9 +58,13 @@ def read_input(inputfile, outfile):
     tmax_s        = 2.5E-15       # simulate until time tmax in s
     timestep_s    = 0.5E-16       # evaluate expression every timestep_s seconds
     E_step_eV     = 1.00          # energy difference between different evaluated electron kinetic energies 
+    Ep_step_eV    = 1.00          # energy difference between different evaluated photoelectron kinetic energies 
     #
     E_min_eV      =  30.0
     E_max_eV      =  50.0
+    #
+    Ep_min_eV     =  10.0
+    Ep_max_eV     =  11.0
     #
     integ         = "analytic"    # options: analytic, (quadrature, romberg - both currently unavailable)  
     integ_outer   = "romberg"     # options: quadrature, romberg
@@ -98,7 +105,23 @@ def read_input(inputfile, outfile):
     
     for line in lines:
         words = line.split()
-        if (words[0] == 'rdg_au'):
+        if (words[0] == 'prc'):
+            if (words[2] == 'ICD'):
+                X_ICD = True
+                X_RICD = False
+                print('X_prc = ICD')
+                outfile.write('X_prc = ICD \n')
+            elif (words[2] == 'RICD'):
+                X_ICD = False
+                X_RICD = True
+                print('X_prc = RICD')
+                outfile.write('X_prc = RICD \n')
+            else:
+                print('no process selected')
+                outfile.write('no process selected \n')
+                
+    # prefactors            
+        elif (words[0] == 'rdg_au'):
             rdg_au = float(words[2])
             print('rdg_au = ', rdg_au)
             outfile.write('rdg_au = ' + str(rdg_au) + '\n')
@@ -238,6 +261,10 @@ def read_input(inputfile, outfile):
             E_step_eV = float(words[2])
             print('E_step_eV = ', E_step_eV)
             outfile.write('E_step_eV = ' + str(E_step_eV) + '\n')
+        elif (words[0] == 'Ep_step_eV'):
+            Ep_step_eV = float(words[2])
+            print('E_step_eV = ', E_step_eV)
+            outfile.write('E_step_eV = ' + str(E_step_eV) + '\n')
     
         elif (words[0] == 'E_min_eV'):
             E_min_eV = float(words[2])
@@ -247,6 +274,15 @@ def read_input(inputfile, outfile):
             E_max_eV = float(words[2])
             print('E_max_eV = ', E_max_eV)
             outfile.write('E_max_eV = ' + str(E_max_eV) + '\n')
+            
+        elif (words[0] == 'Ep_min_eV'):
+            Ep_min_eV = float(words[2])
+            print('Ep_min_eV = ', Ep_min_eV)
+            outfile.write('Ep_min_eV = ' + str(Ep_min_eV) + '\n')
+        elif (words[0] == 'Ep_max_eV'):
+            Ep_max_eV = float(words[2])
+            print('Ep_max_eV = ', Ep_max_eV)
+            outfile.write('Ep_max_eV = ' + str(Ep_max_eV) + '\n')
 
         elif (words[0] == 'integ'):
             if (words[2] == 'romberg'):
@@ -362,13 +398,15 @@ def read_input(inputfile, outfile):
                 sys.exit()
     
     f.close()
-    return (rdg_au, cdg_au,
+    return (X_ICD, X_RICD,
+            rdg_au, cdg_au,
             Er_a_eV, Er_b_eV, tau_a_s, tau_b_s, E_fin_eV, tau_s, E_fin_eV_2, tau_s_2,
             interact_eV,
             Omega_eV, n_X, I_X, X_sinsq, X_gauss, Xshape,
             omega_eV, n_L, I_L, Lshape, delta_t_s, shift_step_s, phi, q, FWHM_L,
-            tmax_s, timestep_s, E_step_eV,
+            tmax_s, timestep_s, E_step_eV, Ep_step_eV,
             E_min_eV, E_max_eV,
+            Ep_min_eV, Ep_max_eV,
             integ, integ_outer, Gamma_type,
             fc_precalc, partial_GamR, part_fc_pre, wavepac_only,
             mass1, mass2, grad_delta, R_eq_AA,
@@ -750,14 +788,13 @@ def read_fc_input(inputfile):
 
 #-------------------------------------------------------------------------
 #   output
-#   output
-def prep_output(I, Omega_au, t_au):
+def prep_output(I, Omega_au, t_au, Ep):
 #    square = np.absolute(I)**2
     #print I
+    Ep_eV = sciconv.hartree_to_ev(Ep)
     Omega_eV = sciconv.hartree_to_ev(Omega_au)
     t_s = sciconv.atu_to_second(t_au)
-    string = format(Omega_eV, '>8.5f') + '   ' + format(t_s, ' .18f') + '   ' + format(I, '.15e')
-    #string = str(Omega_eV) + '   ' + format(t_s, '.18f') + '   ' + format(I, '.15e')
+    string = format(Omega_eV, '>8.5f') + '   ' + format(Ep_eV, '>8.5f') + '   ' + format(t_s, ' .18f') + '   ' + format(I, '.15e')
     return string
 
 def prep_output_comp(I, I2, Omega_au, t_au):

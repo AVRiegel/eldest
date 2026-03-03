@@ -1,3 +1,5 @@
+# process
+prc           = ICD              # options: ICD/RICD
 # transitions dipole moments
 rdg_au        = 0.70             # transition dipole moment into the resonance state
 cdg_au        = 0.5              # transition dipole moment into any continuum state
@@ -37,6 +39,10 @@ timestep_s    = 149.9E-15        # evaluate expression every timestep_s seconds
 E_min_eV      =  9.7995
 E_max_eV      = 10.5
 E_step_eV     =  0.001           # energy difference between different evaluated electron kinetic energies
+#
+Ep_min_eV     = 2.0              # Ep_min and _max are set to zero for prc = RICD
+Ep_max_eV     = 8.0
+Ep_step_eV    = 0.005            # energy difference between different evaluated photoelectron kinetic energies
 #
 integ         = analytic         # options: analytic, (quadrature, romberg - both currently unavailable)
 integ_outer   = quadrature       # options: quadrature, romberg
