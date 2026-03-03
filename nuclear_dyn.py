@@ -1060,8 +1060,8 @@ while (t_au >= TX_au/2\
             else:
                 print('-', end = '', flush = True)
                 cnt = cnt + 1
-        E_p_au = Ep_min_au
-        while (E_p_au <= Ep_max_au):
+            E_p_au = Ep_min_au
+            while (E_p_au <= Ep_max_au):
                 #print(f'{sciconv.hartree_to_ev(E_kin_au):.2} eV')           #?
                 #outfile.write(f'{sciconv.hartree_to_ev(E_kin_au):.2} eV\n') #?
                 p_au = np.sqrt(2*E_kin_au)
