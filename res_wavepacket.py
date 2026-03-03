@@ -64,8 +64,16 @@ else:
     sys.exit('Input file for simulation and potential settings "%s" does not exist.' % settings)
 
 with open(os.devnull, 'w') as dummyfile, silence_print():
-    (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-     _, _, _, _, _, _, _, _, _, _, _, _, mass1, mass2, _, _, _, _, _, _, De, alpha, Req, _, _, _, _, _, _
+    (X_ICD, X_RICD, _, _,
+     _, _, _, _, _, _, _, _, _,
+     _, _, _, _, _, _,
+     _, _, _, _, _, _, _, _, _,
+     _, _, _, Ep_step_eV, _, _, Ep_min_eV, Ep_max_eV,
+     _, _, _, _, _, _, _,
+     mass1, mass2, _, _,
+     _, _, _, _,
+     De, alpha, Req, _,
+     _, _, _, _, _
      ) = in_out.read_input(settings, dummyfile)
 
 outfile=f'wf_{infile}'
@@ -82,12 +90,24 @@ R_arr = np.linspace(R_low, R_high, R_len)
 
 t_low, t_high = [float(num) for num in args.time_lims]
 
+# choose E_p value
+if X_ICD:   # Use centre E_p value
+    num_p = int(((Ep_max_eV-Ep_min_eV)//Ep_step_eV)/2)
+elif X_RICD:
+    num_p = int(0)
 
 
 ##########
 
 with open(infile,'r') as f:
-    data = pd.read_csv(f, header=None, sep='   ', engine='python')
+    raw_data = pd.read_csv(f, header=None, sep=r'\s+', engine='python')
+
+# Select only rows with chosen E_p value, then drop E_p column and renumber columns
+Ep_eV = raw_data[1].iloc[num_p]
+print(f'num_p = {num_p} <=> E_p = {Ep_eV:>8.5f} eV')
+data = raw_data.loc[raw_data[1] == Ep_eV].reset_index(drop=True)
+data.drop(1,axis=1,inplace=True)
+data.columns = range(data.columns.size)
 
 # Morse potential
 red_mass = wf.red_mass_au(mass1,mass2)
