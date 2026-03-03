@@ -1028,6 +1028,7 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
             wp_string = format(nlambda, 'd') + '   ' + format(sciconv.hartree_to_ev(E_p_au), '>8.5f') + '   ' + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
                     + '   ' + format(complex(wp_ampl), ' .15e')
             wp_ampls.append(wp_string)
+            E_p_au = E_p_au + Ep_step_au
     in_out.doout_1f(wp_res_out, wp_ampls)
 
 
@@ -1171,6 +1172,7 @@ while (t_au >= TX_au/2\
             wp_string = format(nlambda, 'd') + '   ' + format(sciconv.hartree_to_ev(E_p_au), '>8.5f') + '   ' + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
                     + '   ' + format(complex(wp_ampl), ' .15e')
             wp_ampls.append(wp_string)
+            E_p_au = E_p_au + Ep_step_au
     in_out.doout_1f(wp_res_out, wp_ampls)
 
 
