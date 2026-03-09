@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander Riegel from July 2023 onwards                   #
-# last change: 2026-06-02 AVR                                            #
+# last change: 2026-03-09 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -43,8 +43,8 @@ if not sys.warnoptions:
 # set up argument parser
 parser = argparse.ArgumentParser(
         description='''ELDEST -- nuclear_dyn.py :
-        A programme to simulate the time-resolved RICD spectroscopy
-        including quantum nuclear dynamics.''',
+        A programme to simulate time-resolved ICD and RICD
+        spectroscopy including quantum nuclear dynamics.''',
         epilog='Originally written by Elke Fasshauer, extended by Alexander V. Riegel.')
 parser.add_argument('infile', help='Input file for simulation, probably photonucl.in')
 parser.add_argument('-f', '--fc', help='''Optional file with pre-calculated "Franck-Condon overlap integrals"
