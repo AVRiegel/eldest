@@ -186,13 +186,6 @@ if Gamma_type == 'const':
 #tau_au_2         = sciconv.second_to_atu(tau_s_2)
 #Gamma_au_2       = 1. / tau_au_2
 
-## nucl-nucl Coulomb repulsion for ICD
-#if (X_ICD):
-#    R_eq_au = sciconv.angstrom_to_bohr(R_eq_AA)
-#    E_fin_au = E_fin_au + 1 / R_eq_au
-#    print('E_fin_au = E_fin_au + 1 / R =', E_fin_au)
-#    outfile.write('E_fin_au = E_fin_au + 1 / R = ' + str(E_fin_au)  + '\n')
-
 # laser parameters
 Omega_au      = sciconv.ev_to_hartree(Omega_eV)
 if (X_sinsq):
@@ -201,7 +194,7 @@ elif(X_gauss):
     sigma     = np.pi * n_X / (Omega_au * np.sqrt(np.log(2)))
     FWHM      = 2 * np.sqrt( 2 * np.log(2)) * sigma
     TX_au     = 5 * sigma
-    sigma_E   = 1. / (2 * sigma)
+    sigma_E   = 1. / sigma
     width_E   = 5 * sigma_E
     EX_max_au = Omega_au + 0.5 * width_E
     print('sigma [s] = ', sciconv.atu_to_second(sigma))
