@@ -192,7 +192,7 @@ elif(X_gauss):
     sigma     = np.pi * n_X / (Omega_au * np.sqrt(np.log(2)))
     FWHM      = 2 * np.sqrt( 2 * np.log(2)) * sigma
     TX_au     = 5 * sigma
-    sigma_E   = 1. / (2 * sigma)
+    sigma_E   = 1. / sigma
     width_E   = 5 * sigma_E
     EX_max_au = Omega_au + 0.5 * width_E
     print('sigma [s] = ', sciconv.atu_to_second(sigma))
