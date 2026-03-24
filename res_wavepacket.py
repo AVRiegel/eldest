@@ -37,6 +37,7 @@ parser = argparse.ArgumentParser(
         description='''This script calculates the wavepacket in the resonance state
         from the projections onto the vibronic resonance states
         that are the output of res_nuclear_dyn.py (in wp_res.dat).''',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog='Alexander V. Riegel, 2024.')
 parser.add_argument('-w', '--wavepacket_infile', default='wp_res.dat',
                     help='File which contains the projections of the wavefunction on the vibronic resonance states.')
