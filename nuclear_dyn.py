@@ -838,7 +838,7 @@ def gamma_minus(T_up):
                                               - mp.exp(-t_minus(-TX_au/2)**2)))
 
 def wp_res_int(t,T_up):
-    return (-A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au)) \
+    return (A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au)) \
             * (mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au)**2) \
                 * gamma_plus(T_up) \
                + mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au)**2) \
