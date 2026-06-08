@@ -263,8 +263,8 @@ def read_input(inputfile, outfile):
             outfile.write('E_step_eV = ' + str(E_step_eV) + '\n')
         elif (words[0] == 'Ep_step_eV'):
             Ep_step_eV = float(words[2])
-            print('E_step_eV = ', E_step_eV)
-            outfile.write('E_step_eV = ' + str(E_step_eV) + '\n')
+            print('Ep_step_eV = ', Ep_step_eV)
+            outfile.write('Ep_step_eV = ' + str(Ep_step_eV) + '\n')
     
         elif (words[0] == 'E_min_eV'):
             E_min_eV = float(words[2])
