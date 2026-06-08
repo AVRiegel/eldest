@@ -10,8 +10,8 @@
 #                                                                        #
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
-# extended by: Alexander Riegel from July 2023 onwards                   #
-# last change: 2026-03-27 AVR                                            #
+# extended by: Alexander V. Riegel from July 2023 onwards                #
+# last change: 2026-06-08 AVR                                            #
 ##########################################################################
 
 import argparse
