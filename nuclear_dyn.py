@@ -267,7 +267,7 @@ elif Gamma_type == 'R6':
         VEr_au_woVR = VEr_au
         print('VEr_au = ', VEr_au)
         outfile.write('VEr_au = ' + str(VEr_au) + '\n')
-    VEr_au = VEr_au*res_Req**3                            # adjusts VEr_au by the R dependent factor
+    VEr_au = VEr_au*gs_Req**3                            # adjusts VEr_au by the R dependent factor
     print('VEr_au_adjusted = ', VEr_au)
     outfile.write('VEr_au_adjusted = ' + str(VEr_au) + '\n')
 elif Gamma_type == 'external':
