@@ -185,6 +185,7 @@ g.set(terminal = "postscript enhanced color size 30cm,15cm font 'Helvetica,26' l
       key = None,
       view = "map",
       size = "ratio 0.5 0.8,1")
+g.load('/mnt/home/alexander/.gnuplot/turbo.pal')
 g.splot(f"'{outfile_pm3d}' u 1:(1e15*$2):4 w pm3d")
 
 # Convert to pdf, crop pdf and clean up (conversion wont work, so perform the commands printed in the end directly in the shell)
