@@ -47,6 +47,8 @@ parser.add_argument('-r', '--r_lims', nargs=3, default=[5.8, 6.8, 7], metavar=('
                     help='Lower and upper limit for R (in a.u.) as well as exponent for number of points with num = 2**R_num_exp + 1.')
 parser.add_argument('-t', '--time_lims', nargs=2, default=[-1.2, 100.], metavar=('t_low', 't_up'),
                     help='Iterable with lower and upper limit for time t (in fs).')
+parser.add_argument('-l', '--lambda_indiv', default=False,
+                    help='Calculate "populations" also for individual vibrational resonance levels.')
 args = parser.parse_args()
 
 
@@ -147,7 +149,8 @@ np.savetxt(outfile, oata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15
 
 # Extract the total resonance-state wavepacket, restructure the file for pm3d and calc population & R expectation value
 outfile_pm3d=f'pm3d_{outfile}'
-eata = oata[-len(sata[0])//N_lambda:]
+step_width = len(sata[0])//N_lambda
+eata = oata[-step_width:]
 np.savetxt(outfile_pm3d, eata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15e'])
 subprocess.call(['sed', '-i', f'/{R_high:10.7f}/G', outfile_pm3d])
 
@@ -157,6 +160,17 @@ for t in range(len(eata)//len(R_arr)):
     pop.loc[t, 0] = mata[1][t]
     pop.loc[t, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,3]**2,dx=R_arr[1]-R_arr[0])
 np.savetxt(popfile, pop, delimiter='   ', fmt=['% .7e', '% .15e'])
+
+if lambda_indiv:
+    for n in range(N_lambda):
+        eata_sub = oata[n*step_width:(n+1)*step_width]
+        popfile_sub=f'pop_{n}_{infile}'
+        pop_sub = pd.DataFrame() 
+        for t in range(len(eata_sub)//len(R_arr)):
+            pop_sub.loc[t, 0] = mata[1][t]
+            pop_sub.loc[t, 1] = simpson(eata_sub[t*len(R_arr):(t+1)*len(R_arr)][:,3]**2,dx=R_arr[1]-R_arr[0])
+        np.savetxt(popfile_sub, pop_sub, delimiter='   ', fmt=['% .7e', '% .15e'])
+
 
 expectfile=f'expect-R_{infile}'
 expect = pd.DataFrame()

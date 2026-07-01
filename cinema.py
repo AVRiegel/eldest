@@ -16,7 +16,7 @@ import shutil
 parser = argparse.ArgumentParser(
         description='''ELDEST -- cinema.py :
         An auxiliary programme to create a movie (gif) of P-E_kin spectra for different times
-        from the file movie.dat (produced by, e.g., nuclear_dyn.py .''',
+        from the file movie.dat (produced by, e.g., nuclear_dyn.py).''',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog='By Alexander V. Riegel.')
 parser.add_argument('-E', '--E_lims', nargs=2, default=[9.8, 10.5], metavar=('E_low', 'E_high'),
