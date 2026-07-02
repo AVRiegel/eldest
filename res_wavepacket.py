@@ -152,7 +152,7 @@ outfile_pm3d=f'pm3d_{outfile}'
 step_width = len(sata[0])//N_lambda
 eata = oata[-step_width:]
 np.savetxt(outfile_pm3d, eata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15e'])
-subprocess.call(['sed', '-i', f'/{R_high:10.7f}/G', outfile_pm3d])
+subprocess.call(['sed', '-i', f'/^[[:space:]]*{f"{R_high:.7f}"}/G', outfile_pm3d])
 
 popfile=f'pop_{infile}'
 pop = pd.DataFrame() 
@@ -161,7 +161,7 @@ for t in range(len(eata)//len(R_arr)):
     pop.loc[t, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,3]**2,dx=R_arr[1]-R_arr[0])
 np.savetxt(popfile, pop, delimiter='   ', fmt=['% .7e', '% .15e'])
 
-if lambda_indiv:
+if args.lambda_indiv:
     for n in range(N_lambda):
         eata_sub = oata[n*step_width:(n+1)*step_width]
         popfile_sub=f'pop_{n}_{infile}'
