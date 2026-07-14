@@ -158,7 +158,7 @@ popfile=f'pop_{infile}'
 pop = pd.DataFrame() 
 for t in range(len(eata)//len(R_arr)):
     pop.loc[t, 0] = mata[1][t]
-    pop.loc[t, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,3]**2,dx=R_arr[1]-R_arr[0])
+    pop.loc[t, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,3],dx=R_arr[1]-R_arr[0])
 np.savetxt(popfile, pop, delimiter='   ', fmt=['% .7e', '% .15e'])
 
 if args.lambda_indiv:
@@ -168,7 +168,7 @@ if args.lambda_indiv:
         pop_sub = pd.DataFrame() 
         for t in range(len(eata_sub)//len(R_arr)):
             pop_sub.loc[t, 0] = mata[1][t]
-            pop_sub.loc[t, 1] = simpson(eata_sub[t*len(R_arr):(t+1)*len(R_arr)][:,3]**2,dx=R_arr[1]-R_arr[0])
+            pop_sub.loc[t, 1] = simpson(eata_sub[t*len(R_arr):(t+1)*len(R_arr)][:,3],dx=R_arr[1]-R_arr[0])
         np.savetxt(popfile_sub, pop_sub, delimiter='   ', fmt=['% .7e', '% .15e'])
 
 
@@ -178,7 +178,7 @@ expect = pd.DataFrame()
 #expect.loc[0, 1] = 0.
 for t in range(1,len(eata)//len(R_arr)):
     expect.loc[t-1, 0] = mata[1][t]
-    expect.loc[t-1, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,0]*eata[t*len(R_arr):(t+1)*len(R_arr)][:,3]**2,dx=R_arr[1]-R_arr[0])/pop[1][t]
+    expect.loc[t-1, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,0]*eata[t*len(R_arr):(t+1)*len(R_arr)][:,3],dx=R_arr[1]-R_arr[0])/pop[1][t]
 np.savetxt(expectfile, expect, delimiter='   ', fmt=['% .7e', '% .15e'])
 
 
