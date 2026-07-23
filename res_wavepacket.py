@@ -31,24 +31,24 @@ def silence_print():
         finally:
             sys.stdout = old_stdout
 
-#######################################
-# Prepare array with R values
-R_low = 5.8
-R_hig = 6.8
-R_len = 2**7 + 1
-R_arr = np.linspace(R_low,R_hig,R_len)
-#######################################
 
 # set up argument parser
 parser = argparse.ArgumentParser(
         description='''This script calculates the wavepacket in the resonance state
         from the projections onto the vibronic resonance states
         that are the output of res_nuclear_dyn.py (in wp_res.dat).''',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog='Alexander V. Riegel, 2024.')
 parser.add_argument('-w', '--wavepacket_infile', default='wp_res.dat',
                     help='File which contains the projections of the wavefunction on the vibronic resonance states.')
 parser.add_argument('-s', '--settings_infile', default='photonucl.in',
                     help='File which includes the simulation settings, potential parameters etc.')
+parser.add_argument('-r', '--r_lims', nargs=3, default=[5.8, 6.8, 7], metavar=('R_low', 'R_high', 'R_num_exp'),
+                    help='Lower and upper limit for R (in a.u.) as well as exponent for number of points with num = 2**R_num_exp + 1.')
+parser.add_argument('-t', '--time_lims', nargs=2, default=[-1.2, 100.], metavar=('t_low', 't_up'),
+                    help='Iterable with lower and upper limit for time t (in fs).')
+parser.add_argument('-l', '--lambda_indiv', default=False,
+                    help='Calculate "populations" also for individual vibrational resonance levels.')
 args = parser.parse_args()
 
 
@@ -67,17 +67,50 @@ else:
     sys.exit('Input file for simulation and potential settings "%s" does not exist.' % settings)
 
 with open(os.devnull, 'w') as dummyfile, silence_print():
-    (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-     _, _, _, _, _, _, _, _, _, _, _, _, mass1, mass2, _, _, _, _, _, _, De, alpha, Req, _, _, _, _, _, _
+    (X_ICD, X_RICD, _, _,
+     _, _, _, _, _, _, _, _, _,
+     _, _, _, _, _, _,
+     _, _, _, _, _, _, _, _, _,
+     _, _, _, Ep_step_eV, _, _, Ep_min_eV, Ep_max_eV,
+     _, _, _, _, _, _, _,
+     mass1, mass2, _, _,
+     _, _, _, _,
+     De, alpha, Req, _,
+     _, _, _, _, _
      ) = in_out.read_input(settings, dummyfile)
 
 outfile=f'wf_{infile}'
 
 
+# prepare array with R values and set time limits
+R_low, R_high, R_num_exp = [float(num) for num in args.r_lims]
+if (R_num_exp.is_integer() and R_num_exp > 0):
+    R_len = 2**int(R_num_exp) + 1
+else:
+    sys.exit('R_num_exp must be positive integer.')
+
+R_arr = np.linspace(R_low, R_high, R_len)
+
+t_low, t_high = [float(num) for num in args.time_lims]
+
+# choose E_p value
+if X_ICD:   # Use centre E_p value
+    num_p = int(((Ep_max_eV-Ep_min_eV)//Ep_step_eV)/2)
+elif X_RICD:
+    num_p = int(0)
+
+
 ##########
 
 with open(infile,'r') as f:
-    data = pd.read_csv(f, header=None, sep='   ', engine='python')
+    raw_data = pd.read_csv(f, header=None, sep=r'\s+', engine='python')
+
+# Select only rows with chosen E_p value, then drop E_p column and renumber columns
+Ep_eV = raw_data[1].iloc[num_p]
+print(f'num_p = {num_p} <=> E_p = {Ep_eV:>8.5f} eV')
+data = raw_data.loc[raw_data[1] == Ep_eV].reset_index(drop=True)
+data.drop(1,axis=1,inplace=True)
+data.columns = range(data.columns.size)
 
 # Morse potential
 red_mass = wf.red_mass_au(mass1,mass2)
@@ -116,16 +149,28 @@ np.savetxt(outfile, oata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15
 
 # Extract the total resonance-state wavepacket, restructure the file for pm3d and calc population & R expectation value
 outfile_pm3d=f'pm3d_{outfile}'
-eata = oata[-len(sata[0])//N_lambda:]
+step_width = len(sata[0])//N_lambda
+eata = oata[-step_width:]
 np.savetxt(outfile_pm3d, eata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15e'])
-subprocess.call(['sed', '-i', f'/{R_hig:10.7f}/G', outfile_pm3d])
+subprocess.call(['sed', '-i', f'/^[[:space:]]*{f"{R_high:.7f}"}/G', outfile_pm3d])
 
 popfile=f'pop_{infile}'
 pop = pd.DataFrame() 
 for t in range(len(eata)//len(R_arr)):
     pop.loc[t, 0] = mata[1][t]
-    pop.loc[t, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,3]**2,dx=R_arr[1]-R_arr[0])
+    pop.loc[t, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,3],dx=R_arr[1]-R_arr[0])
 np.savetxt(popfile, pop, delimiter='   ', fmt=['% .7e', '% .15e'])
+
+if args.lambda_indiv:
+    for n in range(N_lambda):
+        eata_sub = oata[n*step_width:(n+1)*step_width]
+        popfile_sub=f'pop_{n}_{infile}'
+        pop_sub = pd.DataFrame() 
+        for t in range(len(eata_sub)//len(R_arr)):
+            pop_sub.loc[t, 0] = mata[1][t]
+            pop_sub.loc[t, 1] = simpson(eata_sub[t*len(R_arr):(t+1)*len(R_arr)][:,3],dx=R_arr[1]-R_arr[0])
+        np.savetxt(popfile_sub, pop_sub, delimiter='   ', fmt=['% .7e', '% .15e'])
+
 
 expectfile=f'expect-R_{infile}'
 expect = pd.DataFrame()
@@ -133,7 +178,7 @@ expect = pd.DataFrame()
 #expect.loc[0, 1] = 0.
 for t in range(1,len(eata)//len(R_arr)):
     expect.loc[t-1, 0] = mata[1][t]
-    expect.loc[t-1, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,0]*eata[t*len(R_arr):(t+1)*len(R_arr)][:,3]**2,dx=R_arr[1]-R_arr[0])/pop[1][t]
+    expect.loc[t-1, 1] = simpson(eata[t*len(R_arr):(t+1)*len(R_arr)][:,0]*eata[t*len(R_arr):(t+1)*len(R_arr)][:,3],dx=R_arr[1]-R_arr[0])/pop[1][t]
 np.savetxt(expectfile, expect, delimiter='   ', fmt=['% .7e', '% .15e'])
 
 
@@ -148,9 +193,9 @@ g.set(terminal = "postscript enhanced color size 30cm,15cm font 'Helvetica,26' l
       xlabel = "'R (a.u.)'",
       ylabel = "'t (fs)'",
       zlabel = "'P (a.u.)'",
-      xrange = f"[{R_low}:{R_hig}]",
+      xrange = f"[{R_low}:{R_high}]",
 #      xrange = "[5.8:6.8]",
-      yrange = "[-1.2:100]",
+      yrange = f"[{t_low}:{t_high}]",
       key = None,
       view = "map",
       size = "ratio 0.5 0.8,1")
