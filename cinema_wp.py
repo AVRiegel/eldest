@@ -70,8 +70,8 @@ maxim = float(subprocess.check_output("awk 'BEGIN{a=0}{if ($NF>0+a && NF>2) a=$N
 with cd('./tempplot'):    # automatically reverts back to cwd after being finished
     # 1) split pm3d_wf_wp_res.dat along empty lines, enumerate files with (at least) four-digit number (FILE0001.txt, FILE0002.txt etc.)
     # 2) insert line at beginning of each file with timestamp
-    # 2) gnuplot, pass maximum intensity as variable
-    # 3) ffmpeg converts png images into gif movie
+    # 3) gnuplot, pass maximum intensity as variable
+    # 4) ffmpeg converts png images into gif movie
     os.system("""   tr -d '\r' < pm3d_wf_wp_res.dat | awk '{print > sprintf("%s%04d%s", "FILE", ++CNT, ".txt")}' RS=''   """)
     os.system(r""" for file in *.txt; do awk -i inplace 'FNR==1{printf "\"%.3f fs\"\n", $2*1e15}1' $file; done""")
     os.system("gnuplot -c gnufile.gp {} {} {}".format(maxim, *args.R_lims))
