@@ -63,9 +63,9 @@ gnufile.close()
 
 
 os.mkdir('tempplot')
-os.system('cp {} tempplot/.'.format(args.infile))
+os.system('cp {} tempplot/pm3d_wf_wp_res.dat'.format(args.infile))
 os.system('mv gnufile.gp tempplot/.')
-maxim = float(subprocess.check_output("awk 'BEGIN{a=0}{if ($NF>0+a && NF>2) a=$NF} END{print a}' pm3d_wf_wp_res.dat", shell=True)[:-1])    # maximum intensity; NF>2 skips the "xxx fs" lines
+maxim = float(subprocess.check_output("awk 'BEGIN{{a=0}}{{if ($NF>0+a && NF>2) a=$NF}} END{{print a}}' {0}".format(args.infile), shell=True)[:-1])    # maximum intensity; NF>2 skips the "xxx fs" lines
 
 with cd('./tempplot'):    # automatically reverts back to cwd after being finished
     # 1) split pm3d_wf_wp_res.dat along empty lines, enumerate files with (at least) four-digit number (FILE0001.txt, FILE0002.txt etc.)
