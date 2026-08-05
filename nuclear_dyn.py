@@ -122,7 +122,7 @@ Xshape = 'convoluted'
  fc_precalc, partial_GamR, part_fc_pre, wavepac_only,
  mass1, mass2, grad_delta, R_eq_AA,
  gs_de, gs_a, gs_Req, gs_const,
- res_de, res_a, res_Req, res_const,
+ res_a, res_b, res_c, res_d, res_pot_type,
  fin_a, fin_b, fin_c, fin_d, fin_pot_type
  ) = in_out.read_input(infile, outfile)
 
@@ -308,20 +308,51 @@ for n in range (0,n_gs_max+1):
 print()
 print("Resonance state")
 print('-----------------------------------------------------------------')
-print("Energies of vibrational states of the resonance state")
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
-outfile.write("Energies of vibrational states of the resonance state" + '\n')
-lambda_param_res = np.sqrt(2*red_mass*res_de) / res_a
-n_res_max = int(lambda_param_res - 0.5)
-print("n_res_max = ", n_res_max)
-E_lambdas = []
-outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
-print('n_res  ' + 'E [au]            ' + 'E [eV]')
-for n in range (0,n_res_max+1):
-    ev = wf.eigenvalue(n,res_de,res_a,red_mass)
-    E_lambdas.append(ev)
-    outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
-    print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+
+if (res_pot_type == 'morse'):
+    print("Energies of vibrational states of the resonance state")
+    outfile.write("Energies of vibrational states of the resonance state" + '\n')
+    res_de    = res_a
+    res_a     = res_b
+    res_Req   = res_c
+    res_const = res_d
+    lambda_param_res = np.sqrt(2*red_mass*res_de) / res_a
+    n_res_max = int(lambda_param_res - 0.5)     # Maximum quantum number = n_res_max -> number of states = n_res_max + 1
+    print("n_res_max = ", n_res_max)
+    E_lambdas = []
+    print('n_res  ' + 'E [au]            ' + 'E [eV]')
+    outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
+    for n in range (0,n_res_max+1):
+        ev = wf.eigenvalue(n,res_de,res_a,red_mass)
+        E_lambdas.append(ev)
+        outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
+        print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+elif (res_pot_type == 'hyperbel'):
+    print('Resonance state is repulsive')
+    outfile.write('Resonance state is repulsive' + '\n')
+    res_hyp_a = res_a
+    res_hyp_b = res_b
+    E_res_au = res_hyp_b        # Since for an all-repulsive state there is no minimum (E_res), E_res is set to the final potential at infinite distance, i.e. res_hyp_b
+    E_res_au_1 = res_hyp_b
+    R_hyp_step_res = res_c      # (If both res and fin are repulsive, both will be advanced in lockstep but with their individual step widths)
+    threshold_res = res_d       # If, coming from high lambda, for a certain lambda all |<lambda|kappa>| and |<lambda|mu>| are < threshold, don't calc FCF and integrals for all lambda < that lambda
+    E_lambdas = []
+    R_start_EX_max_res = res_hyp_a / (EX_max_au - res_hyp_b)        # R_start of hyperbola corresponding to EX_max_au, used as minimum starting point for discretizing resonance vibr states
+    outfile.write('Continuous vibrational states of the resonance state are discretized:\n')
+    outfile.write('Energy of highest possibly considered vibrational state\n of the resonance state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...\n'.format(
+        sciconv.hartree_to_ev(EX_max_au - res_hyp_b),
+        sciconv.hartree_to_ev(res_hyp_a / R_start_EX_max_res  -  res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)),
+        sciconv.hartree_to_ev(res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)  - res_hyp_a / (R_start_EX_max_res + 2 * R_hyp_step_res)) ))
+    outfile.write('Each E_lambda is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A\n'.format(
+        res_hyp_a, R_start_EX_max_res, sciconv.bohr_to_angstrom(R_start_EX_max_res), R_hyp_step_res, sciconv.bohr_to_angstrom(R_hyp_step_res) ))
+    print('Continuous vibrational states of the resonance state are discretized:')
+    print('Energy of highest possibly considered vibrational state\n of the resonance state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...'.format(
+        sciconv.hartree_to_ev(EX_max_au - res_hyp_b),
+        sciconv.hartree_to_ev(res_hyp_a / R_start_EX_max_res  -  res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)),
+        sciconv.hartree_to_ev(res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)  - res_hyp_a / (R_start_EX_max_res + 2 * R_hyp_step_res)) ))
+    print('Each E_lambda is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A'.format(
+        res_hyp_a, R_start_EX_max_res, sciconv.bohr_to_angstrom(R_start_EX_max_res), R_hyp_step_res, sciconv.bohr_to_angstrom(R_hyp_step_res) ))
 
 #final state
 print()
@@ -356,36 +387,26 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
     R_hyp_step = fin_c
     threshold = fin_d   # If, coming from high mu, for a certain mu all |<mu|kappa>| and |<mu|lambda>| are < threshold, don't calc FCF and integrals for all mu < that mu
     E_mus = []
-    R_start_EX_max = fin_hyp_a / (EX_max_au - fin_hyp_b)        # R_start of hyperbola corresponding to EX_max_au, used as minimum starting point for discretizing final vibr states
+    R_start_EX_max_fin = fin_hyp_a / (EX_max_au - fin_hyp_b)        # R_start of hyperbola corresponding to EX_max_au, used as minimum starting point for discretizing final vibr states
     outfile.write('Continuous vibrational states of the final state are discretized:\n')
     outfile.write('Energy of highest possibly considered vibrational state\n of the final state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...\n'.format(
         sciconv.hartree_to_ev(EX_max_au - fin_hyp_b),
-        sciconv.hartree_to_ev(fin_hyp_a / R_start_EX_max  -  fin_hyp_a / (R_start_EX_max + R_hyp_step)),
-        sciconv.hartree_to_ev(fin_hyp_a / (R_start_EX_max + R_hyp_step)  - fin_hyp_a / (R_start_EX_max + 2 * R_hyp_step)) ))
+        sciconv.hartree_to_ev(fin_hyp_a / R_start_EX_max_fin  -  fin_hyp_a / (R_start_EX_max_fin + R_hyp_step)),
+        sciconv.hartree_to_ev(fin_hyp_a / (R_start_EX_max_fin + R_hyp_step)  - fin_hyp_a / (R_start_EX_max_fin + 2 * R_hyp_step)) ))
     outfile.write('Each E_mu is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A\n'.format(
-        fin_hyp_a, R_start_EX_max, sciconv.bohr_to_angstrom(R_start_EX_max), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
+        fin_hyp_a, R_start_EX_max_fin, sciconv.bohr_to_angstrom(R_start_EX_max_fin), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
     print('Continuous vibrational states of the final state are discretized:')
     print('Energy of highest possibly considered vibrational state\n of the final state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...'.format(
         sciconv.hartree_to_ev(EX_max_au - fin_hyp_b),
-        sciconv.hartree_to_ev(fin_hyp_a / R_start_EX_max  -  fin_hyp_a / (R_start_EX_max + R_hyp_step)),
-        sciconv.hartree_to_ev(fin_hyp_a / (R_start_EX_max + R_hyp_step)  - fin_hyp_a / (R_start_EX_max + 2 * R_hyp_step)) ))
+        sciconv.hartree_to_ev(fin_hyp_a / R_start_EX_max_fin  -  fin_hyp_a / (R_start_EX_max_fin + R_hyp_step)),
+        sciconv.hartree_to_ev(fin_hyp_a / (R_start_EX_max_fin + R_hyp_step)  - fin_hyp_a / (R_start_EX_max_fin + 2 * R_hyp_step)) ))
     print('Each E_mu is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A'.format(
-        fin_hyp_a, R_start_EX_max, sciconv.bohr_to_angstrom(R_start_EX_max), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
+        fin_hyp_a, R_start_EX_max_fin, sciconv.bohr_to_angstrom(R_start_EX_max_fin), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
 
 #-------------------------------------------------------------------------
 # Franck-Condon factors
 #-------------------------------------------------------------------------
-gs_res =  []    # collects sub-lists of FC overlaps: [<l0|k0>, <l1|k0>, ...], [<l0|k1, <l1|k1>, ...], ...
-gs_fin =  []
-res_fin = []
-R_min = sciconv.angstrom_to_bohr(1.5)+0.01
-R_max = sciconv.angstrom_to_bohr(30.0)
-
-for k in range(0,n_gs_max+1):   # prepare the above (empty) sub-lists
-    gs_fin.append(list())
-for l in range(0,n_res_max+1):
-    res_fin.append(list())
-
+# Check for inconsistencies in the options
 if not fc_precalc and args.fc:
     close_files()
     sys.exit('!!! FC input file was provided without being requested. Programme terminated.')
@@ -415,6 +436,7 @@ elif partial_GamR and ((args.fc and not args.FC) or (args.FC and not args.fc)): 
     sys.exit('!!! If partial_GamR is requested, then either both or none of the additional FC input files with (-f) and without (-F) Gamma-R dependence must be provided at the moment. Programme terminated.')
 
 
+# Declare V(R) based on Gamma(R)
 if Gamma_type == 'const':
     V_of_R = lambda R: 1
     partial_GamR = None     # If Gamma(R)=const., then FC integrals with and without Gamma(R) are identical
@@ -427,19 +449,92 @@ elif args.gamma:
 else:                           # For 'external' but from FC file
     V_of_R = lambda R: 1
 
-if partial_GamR:
-    res_fin_woVR = []
-    for l in range(0,n_res_max+1):
-        res_fin_woVR.append(list())
 
 
+# Read in FCs or calculate them
+R_min = sciconv.angstrom_to_bohr(1.5)+0.01
+R_max = sciconv.angstrom_to_bohr(30.0)
 
-# Integration bounds;       and calc ground state - resonance state <lambda|kappa>
-if not args.fc:                 # If, however, an FC input file is provided, FC integrals will be read from it in the next step and their calculation skipped
-    # Numerical integration failsafe check: calculate test FC overlap integral
+if args.fc:     # If an FC input file is provided, FC integrals will be read from it and their calculation skipped
+    if (res_pot_type == 'morse'):
+        if (fin_pot_type == 'morse'):
+            gs_res, gs_fin, res_fin, _, _, _ = in_out.read_fc_input(args.fc)
+            if partial_GamR:
+                gs_res_woVR, gs_fin_woVR, res_fin_woVR, _, _, _ = in_out.read_fc_input(args.FC)
+                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and len(res_fin) == len(res_fin_woVR)):
+                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
+                    close_files()
+                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+
+        elif (fin_pot_type in ('hyperbel','hypfree')):
+            gs_res, gs_fin, res_fin, n_res_max_X, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
+            R_start = R_start_EX_max_fin        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
+            for m in range(0,n_fin_max_X+1):
+                E_mu = fin_hyp_a / R_start
+                E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
+                R_start = R_start + R_hyp_step
+            norm_factor = 1.
+            if partial_GamR:
+                gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
+                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X
+                        and n_fin_max_list_woVR == n_fin_max_list and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
+                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
+                                  + ", res_max_X: " + str(n_res_max_X_woVR == n_res_max_X)
+                                  + ", fin_max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
+                                  + ", fin_max_X: " + str(n_fin_max_X_woVR == n_fin_max_X)
+                                  + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
+                    close_files()
+                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+
+    elif (res_pot_type == 'hyperbel'):
+        if (fin_pot_type == 'morse'):
+            gs_res, gs_fin, res_fin, n_res_max_X, _, _ = in_out.read_fc_input(args.fc)
+            R_start_res = R_start_EX_max_res        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step_res)
+            for l in range(0,n_res_max_X+1):
+                E_lambda = res_hyp_a / R_start_res
+                E_lambdas.insert(0,E_lambda)        # Present loop starts at high energies, but these shall get high lambda numbers = stand at the end of the lists -> fill lists from right to left
+                R_start_res = R_start_res + R_hyp_step_res
+            norm_factor = 1.
+            if partial_GamR:
+                gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, _, _ = in_out.read_fc_input(args.FC)
+                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X and len(res_fin) == len(res_fin_woVR)):
+                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
+                                  + ", res_max_X: " + str(n_res_max_X_woVR == n_res_max_X)
+                                  + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
+                    close_files()
+                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+
+        elif (fin_pot_type in ('hyperbel','hypfree')):
+            gs_res, gs_fin, res_fin, n_res_max_X, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
+            R_start = R_start_EX_max_fin        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
+            for m in range(0,n_fin_max_X+1):
+                E_mu = fin_hyp_a / R_start
+                E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
+                R_start = R_start + R_hyp_step
+            R_start_res = R_start_EX_max_res        # same for resonance states
+            for l in range(0,n_res_max_X+1):
+                E_lambda = res_hyp_a / R_start_res
+                E_lambdas.insert(0,E_lambda)
+                R_start_res = R_start_res + R_hyp_step_res
+            norm_factor = 1.
+            if partial_GamR:
+                gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
+                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X
+                        and n_fin_max_list_woVR == n_fin_max_list and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
+                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
+                                  + ", res_max_X: " + str(n_res_max_X_woVR == n_res_max_X)
+                                  + ", fin_max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
+                                  + ", fin_max_X: " + str(n_fin_max_X_woVR == n_fin_max_X)
+                                  + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
+                    close_files()
+                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+
+else:           # If no args.fc, report integration bounds and calculate FCs
+    # Integration bounds
     print()
     print('-----------------------------------------------------------------')
     outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
+    ## Numerical integration failsafe check: calculate test FC overlap integral
     # print('Numerical integration test')
     #
     # if fin_pot_type == 'morse':
@@ -448,11 +543,11 @@ if not args.fc:                 # If, however, an FC input file is provided, FC 
     #                      * V_of_R(R))
     # elif fin_pot_type == 'hypfree':
     #    func = lambda R: (np.conj(wf.psi_n(R,0,res_a,res_Req,red_mass,res_de))
-    #                      * wf.psi_freehyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max)
+    #                      * wf.psi_freehyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max_fin)
     #                      * V_of_R(R))
     # elif fin_pot_type == 'hyperbel':
     #    func = lambda R: (np.conj(wf.psi_n(R,0,res_a,res_Req,red_mass,res_de))
-    #                      * wf.psi_hyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max)
+    #                      * wf.psi_hyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max_fin)
     #                      * V_of_R(R))
     # tmp = np.zeros(2)
     # while abs(tmp[0]) <= (1000*tmp[1]):                 # checks if the test integral is at least three orders of magnitude larger than the estimated error
@@ -470,129 +565,114 @@ if not args.fc:                 # If, however, an FC input file is provided, FC 
     outfile.write('R_max = {:14.10E} au = {:5.5f} A\n'.format(R_max, sciconv.bohr_to_angstrom(R_max)))
     outfile.write('Hope that is in order.' + '\n')
 
-    # calc ground state - resonance state <lambda|kappa>
-    for k in range (0,n_gs_max+1):
-        tmp = []
-        for l in range (0,n_res_max+1):
-            FC = wf.mp_FCmor_mor(l,res_a,res_Req,res_de,red_mass,
-                                 k,gs_a,gs_Req,gs_de,R_min,R_max)
-            tmp.append(FC)
-        gs_res.append(tmp)
-    
-# read in FCs;      or calc ground state - final state <mu|kappa>   and   resonance state - final state <mu|lambda>
-if (fin_pot_type == 'morse'):
-    if args.fc:            # If an FC input file is provided, read in the FC integrals from it and skip their calculation
-        gs_res, gs_fin, res_fin, _, _ = in_out.read_fc_input(args.fc)
-        if partial_GamR:
-            gs_res_woVR, gs_fin_woVR, res_fin_woVR, _, _ = in_out.read_fc_input(args.FC)
-            if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and len(res_fin) == len(res_fin_woVR)):
-                outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                close_files()
-                sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
-    else:
-        for m in range(0,n_fin_max+1):
-            for k in range(0,n_gs_max+1):
-                FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
+    # Calculate FCs
+gs_res =  []    # collects sub-lists of FC overlaps: [<l0|k0>, <l1|k0>, ...], [<l0|k1, <l1|k1>, ...], ...
+gs_fin =  []
+res_fin = []
+if partial_GamR:
+    res_fin_woVR = []
+    for l in range(0,n_res_max+1):
+        res_fin_woVR.append(list())
+
+for k in range(0,n_gs_max+1):   # prepare the above (empty) sub-lists
+    gs_fin.append(list())
+for l in range(0,n_res_max+1):
+    res_fin.append(list())
+
+    if (res_pot_type == 'morse'):
+        for k in range (0,n_gs_max+1):      # ground state - resonance state <lambda|kappa>
+            tmp = []
+            for l in range (0,n_res_max+1):
+                FC = wf.mp_FCmor_mor(l,res_a,res_Req,res_de,red_mass,
                                      k,gs_a,gs_Req,gs_de,R_min,R_max)
-                gs_fin[k].append(FC)
-            for l in range(0,n_res_max+1):
-                FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
-                                     l,res_a,res_Req,res_de,R_min,R_max,
-                                     V_of_R=V_of_R)      # Gamma(R) dependence only influences res-fin FC integrals (interaction mediated by V)
-                res_fin[l].append(FC)
-                if partial_GamR:
+                tmp.append(FC)
+            gs_res.append(tmp)
+
+        if (fin_pot_type == 'morse'):
+            for m in range(0,n_fin_max+1):      # ground state - final state <mu|kappa>   and   resonance state - final state <mu|lambda>
+                for k in range(0,n_gs_max+1):
+                    FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
+                                         k,gs_a,gs_Req,gs_de,R_min,R_max)
+                    gs_fin[k].append(FC)
+                for l in range(0,n_res_max+1):
                     FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
                                          l,res_a,res_Req,res_de,R_min,R_max,
-                                         V_of_R=lambda R: 1)
-                    res_fin_woVR[l].append(FC)
+                                         V_of_R=V_of_R)      # Gamma(R) dependence only influences res-fin FC integrals (interaction mediated by V)
+                    res_fin[l].append(FC)
+                    if partial_GamR:
+                        FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
+                                             l,res_a,res_Req,res_de,R_min,R_max,
+                                             V_of_R=lambda R: 1)
+                        res_fin_woVR[l].append(FC)
 
-
-elif (fin_pot_type in ('hyperbel','hypfree')):
-    if args.fc:            # If an FC input file is provided, read in the FC integrals from it and skip their calculation
-        gs_res, gs_fin, res_fin, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
-        R_start = R_start_EX_max        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
-        for m in range(0,n_fin_max_X+1):
-            E_mu = fin_hyp_a / R_start
-            E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
-            R_start = R_start + R_hyp_step
-        norm_factor = 1.
-        if partial_GamR:
-            gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
-            if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_fin_max_list_woVR == n_fin_max_list
-                    and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
-                outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
-                              + ", max_X: " + str(n_fin_max_X_woVR == n_fin_max_X) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                close_files()
-                sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
-
-    else:
-        FCfunc = wf.mp_FCmor_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FCmor_freehyp
-        Req_max = max(gs_Req, res_Req)
-        R_start = R_start_EX_max        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
-        thresh_flag = -1                # Initialize flag for FC-calc stop. Counts how often in a (mu) row all FC fall below threshold
-        while (thresh_flag < 3):        # Stop FC calc if all |FC| < threshold for 3 consecutive mu
-            E_mu = fin_hyp_a / R_start
-            E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
-            print(f'--- R_start = {R_start:7.4f} au = {sciconv.bohr_to_angstrom(R_start):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start - R_start_EX_max) / R_hyp_step  + 0.1)}')    #?
-    #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_mu = {E_mu:5.5f} au = {sciconv.hartree_to_ev(E_mu):5.5f} eV, steps: {int((R_start - R_start_EX_max) / R_hyp_step  + 0.1)}\n')  #?
-            for k in range(0,n_gs_max+1):
-                FC = FCfunc(k,gs_a,gs_Req,gs_de,red_mass,
-                            fin_hyp_a,fin_hyp_b,R_start,R_min,R_max)
-                gs_fin[k].insert(0,FC)
-                print(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}')   #?
-    #            outfile.write(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}\n')   #?
-            for l in range(0,n_res_max+1):
-                FC = FCfunc(l,res_a,res_Req,res_de,red_mass,
-                            fin_hyp_a,fin_hyp_b,R_start,R_min,R_max,
-                            V_of_R=V_of_R)
-                res_fin[l].insert(0,FC)
-                print(f'l = {l}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}')   #?
-    #            outfile.write(f'l = {l}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}\n')   #?
-                if partial_GamR:
+        elif (fin_pot_type in ('hyperbel','hypfree')):
+            FCfunc = wf.mp_FCmor_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FCmor_freehyp
+            Req_max = max(gs_Req, res_Req)
+            R_start = R_start_EX_max_fin        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
+            thresh_flag = -1                # Initialize flag for FC-calc stop. Counts how often in a (mu) row all FC fall below threshold
+            while (thresh_flag < 3):        # Stop FC calc if all |FC| < threshold for 3 consecutive mu
+                E_mu = fin_hyp_a / R_start
+                E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
+                print(f'--- R_start = {R_start:7.4f} au = {sciconv.bohr_to_angstrom(R_start):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start - R_start_EX_max_fin) / R_hyp_step  + 0.1)}')    #?
+        #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_mu = {E_mu:5.5f} au = {sciconv.hartree_to_ev(E_mu):5.5f} eV, steps: {int((R_start - R_start_EX_max_fin) / R_hyp_step  + 0.1)}\n')  #?
+                for k in range(0,n_gs_max+1):
+                    FC = FCfunc(k,gs_a,gs_Req,gs_de,red_mass,
+                                fin_hyp_a,fin_hyp_b,R_start,R_min,R_max)
+                    gs_fin[k].insert(0,FC)
+                    print(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}')   #?
+        #            outfile.write(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}\n')   #?
+                for l in range(0,n_res_max+1):
                     FC = FCfunc(l,res_a,res_Req,res_de,red_mass,
                                 fin_hyp_a,fin_hyp_b,R_start,R_min,R_max,
-                                V_of_R=lambda R: 1)
-                    res_fin_woVR[l].insert(0,FC)
-                    print(f'l = {l}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}')   #?
-    #               outfile.write(f'l = {l}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}\n')   #?
-            if (R_start > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req
-                if (all(np.abs( gs_fin[k][0]) < threshold for k in range(0, n_gs_max+1)) and
-                    all(np.abs(res_fin[l][0]) < threshold for l in range(0,n_res_max+1)) ): # To keep consistency, the res_fin_woVR are not included in this check
-                    if (thresh_flag != -1):     # -1 can only occur at lowest R_start values (once any FC > threshold: flag is set to 0, then stays >= 0) -> dont stop calc right at start just bc FC are small there
-                        thresh_flag = thresh_flag + 1
-                else:
-                    thresh_flag = 0         # If any FC overlap > threshold, reset flag -> only (mu-)consecutive threshold check passes shall stop calc
-            print(f'thresh_flag = {thresh_flag}')                                                                               #?
-    #        outfile.write(f'thresh_flag = {thresh_flag}\n')                                                                               #?
-            R_start = R_start + R_hyp_step
+                                V_of_R=V_of_R)
+                    res_fin[l].insert(0,FC)
+                    print(f'l = {l}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}')   #?
+        #            outfile.write(f'l = {l}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}\n')   #?
+                    if partial_GamR:
+                        FC = FCfunc(l,res_a,res_Req,res_de,red_mass,
+                                    fin_hyp_a,fin_hyp_b,R_start,R_min,R_max,
+                                    V_of_R=lambda R: 1)
+                        res_fin_woVR[l].insert(0,FC)
+                        print(f'l = {l}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}')   #?
+        #               outfile.write(f'l = {l}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}\n')   #?
+                if (R_start > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req
+                    if (all(np.abs( gs_fin[k][0]) < threshold for k in range(0, n_gs_max+1)) and
+                        all(np.abs(res_fin[l][0]) < threshold for l in range(0,n_res_max+1)) ): # To keep consistency, the res_fin_woVR are not included in this check
+                        if (thresh_flag != -1):     # -1 can only occur at lowest R_start values (once any FC > threshold: flag is set to 0, then stays >= 0) -> dont stop calc right at start just bc FC are small there
+                            thresh_flag = thresh_flag + 1
+                    else:
+                        thresh_flag = 0         # If any FC overlap > threshold, reset flag -> only (mu-)consecutive threshold check passes shall stop calc
+                print(f'thresh_flag = {thresh_flag}')                                                                               #?
+        #        outfile.write(f'thresh_flag = {thresh_flag}\n')                                                                               #?
+                R_start = R_start + R_hyp_step
 
-        # Enforce FC sum rule: for a bound vibr state |b> (b=kappa,lambda), int_0^inf dEmu <b|mu><mu|b> = 1, or discretized, sum_Emu DeltaE <b|mu><mu|b> = 1, i. e. sum_Rmu = DeltaR Va/Rmu^2 <b|mu><mu|b> = 1
-    #    norm_fin_gs = []        # Current values of the sum_Rmu with |b> = |kappa>
-    #    norm_fin_res = []       # Current values of the sum_Rmu with |b> = |lambda>
-    #    for k in range(0,n_gs_max+1):
-    #        norm_fin_gs.append(R_hyp_step / fin_hyp_a * np.sum(np.abs(gs_fin[k])**2 * np.array(E_mus)**2))
-    #        gs_fin[k] = gs_fin[k] / np.sqrt(norm_fin_gs[k])     # Rescale FC overlaps <k|m> so that sum_Rmu = 1
-    #    for l in range(0,n_res_max+1):
-    #        norm_fin_res.append(R_hyp_step / fin_hyp_a * np.sum(np.abs(res_fin[l])**2 * np.array(E_mus)**2))
-    #        res_fin[l] = res_fin[l] / np.sqrt(norm_fin_res[l])  # Rescale FC overlaps <l|m> so that sum_Rmu = 1
-    #    print('norm_fin_gs =', norm_fin_gs)
-    #    print('norm_fin_res =', norm_fin_res)
-    #    outfile.write('norm_fin_gs = ' + str(norm_fin_gs) + '\n')       #?
-    #    outfile.write('norm_fin_res = ' + str(norm_fin_res) + '\n')     #?
-#        norm_factor = 1.
-#       norm_factor = R_hyp_step / fin_hyp_a * np.sum(np.abs(gs_fin[0])**2 * np.array(E_mus)**2)   # All FC overlaps will be rescaled using the sum_Rmu with |b> = |k=0>
-#        for k in range(0,n_gs_max+1):
-#            gs_fin[k] = gs_fin[k] / np.sqrt(norm_factor)        # Rescale FC overlaps <k|m>
-#        for l in range(0,n_res_max+1):
-#            res_fin[l] = res_fin[l] / np.sqrt(norm_factor)      # Rescale FC overlaps <l|m>
-
-        n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
-        for E_l in E_lambdas:
-            for n_fin in range(len(E_mus)-1, -1, -1):           # Loop over E_mus from back to start
-                if (E_fin_au + E_mus[n_fin] <= Er_au + E_l):    # The highest (i.e. first, since loop starts at high n_fin) n_fin for which (E_fin + E_mu <= E_res + E_l) is n_fin_max for this l
-                    n_fin_max_list.append(n_fin)
-                    break
-        n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
+            # Enforce FC sum rule: for a bound vibr state |b> (b=kappa,lambda), int_0^inf dEmu <b|mu><mu|b> = 1, or discretized, sum_Emu DeltaE <b|mu><mu|b> = 1, i. e. sum_Rmu = DeltaR Va/Rmu^2 <b|mu><mu|b> = 1
+        #    norm_fin_gs = []        # Current values of the sum_Rmu with |b> = |kappa>
+        #    norm_fin_res = []       # Current values of the sum_Rmu with |b> = |lambda>
+        #    for k in range(0,n_gs_max+1):
+        #        norm_fin_gs.append(R_hyp_step / fin_hyp_a * np.sum(np.abs(gs_fin[k])**2 * np.array(E_mus)**2))
+        #        gs_fin[k] = gs_fin[k] / np.sqrt(norm_fin_gs[k])     # Rescale FC overlaps <k|m> so that sum_Rmu = 1
+        #    for l in range(0,n_res_max+1):
+        #        norm_fin_res.append(R_hyp_step / fin_hyp_a * np.sum(np.abs(res_fin[l])**2 * np.array(E_mus)**2))
+        #        res_fin[l] = res_fin[l] / np.sqrt(norm_fin_res[l])  # Rescale FC overlaps <l|m> so that sum_Rmu = 1
+        #    print('norm_fin_gs =', norm_fin_gs)
+        #    print('norm_fin_res =', norm_fin_res)
+        #    outfile.write('norm_fin_gs = ' + str(norm_fin_gs) + '\n')       #?
+        #    outfile.write('norm_fin_res = ' + str(norm_fin_res) + '\n')     #?
+    #        norm_factor = 1.
+    #       norm_factor = R_hyp_step / fin_hyp_a * np.sum(np.abs(gs_fin[0])**2 * np.array(E_mus)**2)   # All FC overlaps will be rescaled using the sum_Rmu with |b> = |k=0>
+    #        for k in range(0,n_gs_max+1):
+    #            gs_fin[k] = gs_fin[k] / np.sqrt(norm_factor)        # Rescale FC overlaps <k|m>
+    #        for l in range(0,n_res_max+1):
+    #            res_fin[l] = res_fin[l] / np.sqrt(norm_factor)      # Rescale FC overlaps <l|m>
+    
+            n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
+            for E_l in E_lambdas:
+                for n_fin in range(len(E_mus)-1, -1, -1):           # Loop over E_mus from back to start
+                    if (E_fin_au + E_mus[n_fin] <= Er_au + E_l):    # The highest (i.e. first, since loop starts at high n_fin) n_fin for which (E_fin + E_mu <= E_res + E_l) is n_fin_max for this l
+                        n_fin_max_list.append(n_fin)
+                        break
+            n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
 
 # print FC integrals
 #   gs-res
