@@ -339,19 +339,19 @@ elif (res_pot_type == 'hyperbel'):
     threshold_res = res_d       # If, coming from high lambda, for a certain lambda all |<lambda|kappa>| and |<lambda|mu>| are < threshold, don't calc FCF and integrals for all lambda < that lambda
     E_lambdas = []
     R_start_EX_max_res = res_hyp_a / (EX_max_au - res_hyp_b)        # R_start of hyperbola corresponding to EX_max_au, used as minimum starting point for discretizing resonance vibr states
-    outfile.write('Continuous vibrational states of the resonance state are discretized:\n')
+    outfile.write('Continuous vibrational states of resonance state are discretized:\n')
     outfile.write('Energy of highest possibly considered vibrational state\n of the resonance state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...\n'.format(
         sciconv.hartree_to_ev(EX_max_au - res_hyp_b),
         sciconv.hartree_to_ev(res_hyp_a / R_start_EX_max_res  -  res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)),
         sciconv.hartree_to_ev(res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)  - res_hyp_a / (R_start_EX_max_res + 2 * R_hyp_step_res)) ))
-    outfile.write('Each E_lambda is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A\n'.format(
+    outfile.write('Each E_lambda is calculated as {0} au / R_start_res,\n where R_start_res begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A\n'.format(
         res_hyp_a, R_start_EX_max_res, sciconv.bohr_to_angstrom(R_start_EX_max_res), R_hyp_step_res, sciconv.bohr_to_angstrom(R_hyp_step_res) ))
-    print('Continuous vibrational states of the resonance state are discretized:')
+    print('Continuous vibrational states of resonance state are discretized:')
     print('Energy of highest possibly considered vibrational state\n of the resonance state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...'.format(
         sciconv.hartree_to_ev(EX_max_au - res_hyp_b),
         sciconv.hartree_to_ev(res_hyp_a / R_start_EX_max_res  -  res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)),
         sciconv.hartree_to_ev(res_hyp_a / (R_start_EX_max_res + R_hyp_step_res)  - res_hyp_a / (R_start_EX_max_res + 2 * R_hyp_step_res)) ))
-    print('Each E_lambda is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A'.format(
+    print('Each E_lambda is calculated as {0} au / R_start_res,\n where R_start_res begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A'.format(
         res_hyp_a, R_start_EX_max_res, sciconv.bohr_to_angstrom(R_start_EX_max_res), R_hyp_step_res, sciconv.bohr_to_angstrom(R_hyp_step_res) ))
 
 #final state
@@ -473,7 +473,6 @@ if args.fc:     # If an FC input file is provided, FC integrals will be read fro
                 E_mu = fin_hyp_a / R_start
                 E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
                 R_start = R_start + R_hyp_step
-            norm_factor = 1.
             if partial_GamR:
                 gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
                 if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X
@@ -494,7 +493,6 @@ if args.fc:     # If an FC input file is provided, FC integrals will be read fro
                 E_lambda = res_hyp_a / R_start_res
                 E_lambdas.insert(0,E_lambda)        # Present loop starts at high energies, but these shall get high lambda numbers = stand at the end of the lists -> fill lists from right to left
                 R_start_res = R_start_res + R_hyp_step_res
-            norm_factor = 1.
             if partial_GamR:
                 gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, _, _ = in_out.read_fc_input(args.FC)
                 if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X and len(res_fin) == len(res_fin_woVR)):
@@ -516,7 +514,6 @@ if args.fc:     # If an FC input file is provided, FC integrals will be read fro
                 E_lambda = res_hyp_a / R_start_res
                 E_lambdas.insert(0,E_lambda)
                 R_start_res = R_start_res + R_hyp_step_res
-            norm_factor = 1.
             if partial_GamR:
                 gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
                 if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X
@@ -566,20 +563,20 @@ else:           # If no args.fc, report integration bounds and calculate FCs
     outfile.write('Hope that is in order.' + '\n')
 
     # Calculate FCs
-gs_res =  []    # collects sub-lists of FC overlaps: [<l0|k0>, <l1|k0>, ...], [<l0|k1, <l1|k1>, ...], ...
-gs_fin =  []
-res_fin = []
-if partial_GamR:
-    res_fin_woVR = []
-    for l in range(0,n_res_max+1):
-        res_fin_woVR.append(list())
-
-for k in range(0,n_gs_max+1):   # prepare the above (empty) sub-lists
-    gs_fin.append(list())
-for l in range(0,n_res_max+1):
-    res_fin.append(list())
+    gs_res =  []    # collects sub-lists of FC overlaps: [<l0|k0>, <l1|k0>, ...], [<l0|k1, <l1|k1>, ...], ...
+    gs_fin =  []
+    res_fin = []
+    if partial_GamR:
+        res_fin_woVR = []
 
     if (res_pot_type == 'morse'):
+        for k in range(0,n_gs_max+1):   # prepare the above (empty) sub-lists
+            gs_fin.append(list())
+        for l in range(0,n_res_max+1):
+            res_fin.append(list())
+        if partial_GamR:
+            for l in range(0,n_res_max+1):
+                res_fin_woVR.append(list())
         for k in range (0,n_gs_max+1):      # ground state - resonance state <lambda|kappa>
             tmp = []
             for l in range (0,n_res_max+1):
@@ -645,26 +642,6 @@ for l in range(0,n_res_max+1):
                 print(f'thresh_flag = {thresh_flag}')                                                                               #?
         #        outfile.write(f'thresh_flag = {thresh_flag}\n')                                                                               #?
                 R_start = R_start + R_hyp_step
-
-            # Enforce FC sum rule: for a bound vibr state |b> (b=kappa,lambda), int_0^inf dEmu <b|mu><mu|b> = 1, or discretized, sum_Emu DeltaE <b|mu><mu|b> = 1, i. e. sum_Rmu = DeltaR Va/Rmu^2 <b|mu><mu|b> = 1
-        #    norm_fin_gs = []        # Current values of the sum_Rmu with |b> = |kappa>
-        #    norm_fin_res = []       # Current values of the sum_Rmu with |b> = |lambda>
-        #    for k in range(0,n_gs_max+1):
-        #        norm_fin_gs.append(R_hyp_step / fin_hyp_a * np.sum(np.abs(gs_fin[k])**2 * np.array(E_mus)**2))
-        #        gs_fin[k] = gs_fin[k] / np.sqrt(norm_fin_gs[k])     # Rescale FC overlaps <k|m> so that sum_Rmu = 1
-        #    for l in range(0,n_res_max+1):
-        #        norm_fin_res.append(R_hyp_step / fin_hyp_a * np.sum(np.abs(res_fin[l])**2 * np.array(E_mus)**2))
-        #        res_fin[l] = res_fin[l] / np.sqrt(norm_fin_res[l])  # Rescale FC overlaps <l|m> so that sum_Rmu = 1
-        #    print('norm_fin_gs =', norm_fin_gs)
-        #    print('norm_fin_res =', norm_fin_res)
-        #    outfile.write('norm_fin_gs = ' + str(norm_fin_gs) + '\n')       #?
-        #    outfile.write('norm_fin_res = ' + str(norm_fin_res) + '\n')     #?
-    #        norm_factor = 1.
-    #       norm_factor = R_hyp_step / fin_hyp_a * np.sum(np.abs(gs_fin[0])**2 * np.array(E_mus)**2)   # All FC overlaps will be rescaled using the sum_Rmu with |b> = |k=0>
-    #        for k in range(0,n_gs_max+1):
-    #            gs_fin[k] = gs_fin[k] / np.sqrt(norm_factor)        # Rescale FC overlaps <k|m>
-    #        for l in range(0,n_res_max+1):
-    #            res_fin[l] = res_fin[l] / np.sqrt(norm_factor)      # Rescale FC overlaps <l|m>
     
             n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
             for E_l in E_lambdas:
@@ -684,11 +661,20 @@ outfile.write('\n' + '----------------------------------------------------------
 outfile.write("Franck-Condon overlaps between ground and resonance state" + '\n')
 outfile.write('n_gs  ' + 'n_res  ' + '<res|gs>' + '\n')
 
-for k in range (0,n_gs_max+1):
-    for l in range (0,n_res_max+1):
+if (res_pot_type == 'hyperbel'):
+    n_res_max = n_res_max_X
+for k in range(0,n_gs_max+1):
+    for l in range(0,n_res_max+1):
         FC = gs_res[k][l]
-        outfile.write('{:4d}  {:5d}  {:14.10E}\n'.format(k,l,FC))
-        print(('{:4d}  {:5d}  {:14.10E}'.format(k,l,FC)))
+        outfile.write('{:4d}  {:5d}  {: 14.10E}\n'.format(k,l,FC))
+        if (res_pot_type == 'morse'):
+            print(('{:4d}  {:5d}  {: 14.10E}'.format(k,l,FC)))
+        elif (res_pot_type == 'hyperbel'):
+            if (l == 0 or l == n_res_max-1 or l == n_res_max):      # Don't print all the FC, just the first two and last two (per GS vibr state)
+                print(('{:4d}  {:5d}  {: 14.10E}'.format(k,l,FC)))
+            elif (l == 1):
+                print(('{:4d}  {:5d}  {: 14.10E}'.format(k,l,FC)))
+                print('  ...')
 
 #   gs-fin
 print()
@@ -696,9 +682,6 @@ print('-----------------------------------------------------------------')
 print("Franck-Condon overlaps between ground and final state")
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
 outfile.write("Franck-Condon overlaps between ground and final state" + '\n')
-#if (fin_pot_type in ('hyperbel','hypfree')):
-#    print('norm_factor =', norm_factor)
-#    outfile.write('norm_factor = ' + str(norm_factor) + '\n')
 
 print('n_gs  ' +'n_fin  ' + '<fin|gs>')
 outfile.write('n_gs  ' +'n_fin  ' + '<fin|gs>' + '\n')
