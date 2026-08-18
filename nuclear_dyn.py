@@ -452,7 +452,7 @@ else:                           # For 'external' but from FC file
 
 
 # Read in FCs or calculate them
-R_min = sciconv.angstrom_to_bohr(1.5)+0.01
+R_min = sciconv.angstrom_to_bohr(1.5)
 R_max = sciconv.angstrom_to_bohr(30.0)
 
 if args.fc:     # If an FC input file is provided, FC integrals will be read from it and their calculation skipped
@@ -531,27 +531,6 @@ else:           # If no args.fc, report integration bounds and calculate FCs
     print()
     print('-----------------------------------------------------------------')
     outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
-    ## Numerical integration failsafe check: calculate test FC overlap integral
-    # print('Numerical integration test')
-    #
-    # if fin_pot_type == 'morse':
-    #    func = lambda R: (np.conj(wf.psi_n(R,0,res_a,res_Req,red_mass,res_de))
-    #                      * wf.psi_n(R,0,fin_a,fin_Req,red_mass,fin_de)
-    #                      * V_of_R(R))
-    # elif fin_pot_type == 'hypfree':
-    #    func = lambda R: (np.conj(wf.psi_n(R,0,res_a,res_Req,red_mass,res_de))
-    #                      * wf.psi_freehyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max_fin)
-    #                      * V_of_R(R))
-    # elif fin_pot_type == 'hyperbel':
-    #    func = lambda R: (np.conj(wf.psi_n(R,0,res_a,res_Req,red_mass,res_de))
-    #                      * wf.psi_hyp(R,fin_hyp_a,fin_hyp_b,red_mass,R_start_EX_max_fin)
-    #                      * V_of_R(R))
-    # tmp = np.zeros(2)
-    # while abs(tmp[0]) <= (1000*tmp[1]):                 # checks if the test integral is at least three orders of magnitude larger than the estimated error
-    #    R_min -= 0.01                                   # if so: lower the lower integration bound by 0.01 bohr
-    #    tmp = integrate.quad(func, R_min, R_max,epsabs=1e-20,limit=500)
-    #    #print(R_min, tmp)  #?
-    R_min -= 0.01  # Counteract the +0.01 bohr when R_min was defined
 
     print('Bounds of integration over R for the Franck-Condon factors')
     print('R_min = {:14.10E} au = {:5.5f} A'.format(R_min, sciconv.bohr_to_angstrom(R_min)))
