@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-06-08 AVR                                            #
+# last change: 2026-08-18 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -689,7 +689,7 @@ outfile.write('\n' + '----------------------------------------------------------
 outfile.write("Franck-Condon overlaps between final and resonance state" + '\n')
 outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
 
-for l in range(0,n_res_max+1):
+for l in (range(0,n_res_max+1) if (res_pot_type == 'morse') else [0,n_res_max_X]):
     if (fin_pot_type in ('hyperbel','hypfree')):
         n_fin_max = n_fin_max_list[l]
     for m in range(0,n_fin_max+1):
@@ -703,6 +703,9 @@ for l in range(0,n_res_max+1):
             elif (m == 1):
                 print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
                 print('   ...')
+if (res_pot_type == 'hyperbel'):
+    print("All overlaps between ground or final state and resonance state\n outside the indicated quantum numbers are considered zero")
+    outfile.write("All overlaps between ground or final state and resonance state\n outside the indicated quantum numbers are considered zero\n")
 if (fin_pot_type in ('hyperbel','hypfree')):
     print("All overlaps between ground or resonance state and final state\n outside the indicated quantum numbers are considered zero")
     outfile.write("All overlaps between ground or resonance state and final state\n outside the indicated quantum numbers are considered zero\n")
@@ -716,7 +719,7 @@ if partial_GamR:
     print('n_res  ' +'n_fin  ' + '<fin|res>')
     outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
     
-    for l in range(0,n_res_max+1):
+    for l in (range(0,n_res_max+1) if (res_pot_type == 'morse') else [0,n_res_max_X]):
         if (fin_pot_type in ('hyperbel','hypfree')):
             n_fin_max = n_fin_max_list[l]
         for m in range(0,n_fin_max+1):
