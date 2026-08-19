@@ -548,6 +548,7 @@ else:           # If no args.fc, report integration bounds and calculate FCs
     if partial_GamR:
         res_fin_woVR = []
 
+    ##### If resonance state has Morse potential
     if (res_pot_type == 'morse'):
         for k in range(0,n_gs_max+1):   # prepare the above (empty) sub-lists
             gs_fin.append(list())
@@ -629,6 +630,74 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                         n_fin_max_list.append(n_fin)
                         break
             n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
+
+
+    ##### If resonance state has repulsive Coulomb potential
+    elif (res_pot_type == 'hyperbel'):
+        if (fin_pot_type == 'morse'):
+            for k in range (0,n_gs_max+1):      # ground state - final state <mu|kappa>
+                tmp = []
+                for m in range (0,n_fin_max+1):
+                    FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
+                                         k,gs_a,gs_Req,gs_de,R_min,R_max)
+                    tmp.append(FC)
+                gs_fin.append(tmp)
+
+            for k in range(0,n_gs_max+1):   # prepare the (empty) sub-lists
+                gs_res.append(list())
+            FCfunc = wf.mp_FCmor_hyp
+            Req_max = max(gs_Req, fin_Req)
+            R_start = R_start_EX_max_res        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
+            thresh_flag = -1                # Initialize flag for FC-calc stop. Counts how often in a (lambda) row all FC fall below threshold
+            while (thresh_flag < 3):        # Stop FC calc if all |FC| < threshold for 3 consecutive lambda
+                E_lambda = res_hyp_a / R_start
+                E_lambdas.insert(0,E_lambda)        # Present loop starts at high energies, but these shall get high lambda numbers = stand at the end of the lists -> fill lists from right to left
+                print(f'--- R_start = {R_start:7.4f} au = {sciconv.bohr_to_angstrom(R_start):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###   steps: {int((R_start - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}')    #?
+        #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_lambda = {E_lambda:5.5f} au = {sciconv.hartree_to_ev(E_lambda):5.5f} eV, steps: {int((R_start - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}\n')  #?
+                for k in range(0,n_gs_max+1):
+                    FC = FCfunc(k,gs_a,gs_Req,gs_de,red_mass,
+                                res_hyp_a,res_hyp_b,R_start,R_min,R_max)
+                    gs_res[k].insert(0,FC)
+                    print(f'k = {k}, gs_res  = {FC: 10.10E}, |gs_res|  = {np.abs(FC):10.10E}')   #?
+        #            outfile.write(f'k = {k}, gs_res  = {FC: 10.10E}, |gs_res|  = {np.abs(FC):10.10E}\n')   #?
+                tmp = []
+                if partial_GamR: parttmp = []
+                for m in range(0,n_fin_max+1):
+                    FC = FCfunc(m,fin_a,fin_Req,fin_de,red_mass,
+                                res_hyp_a,res_hyp_b,R_start,R_min,R_max,
+                                V_of_R=V_of_R)
+                    tmp.append(FC)
+                    print(f'm = {m}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}')   #?
+        #            outfile.write(f'm = {m}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}\n')   #?
+                    if partial_GamR:
+                        FC = FCfunc(m,fin_a,fin_Req,fin_de,red_mass,
+                                    res_hyp_a,res_hyp_b,R_start,R_min,R_max,
+                                    V_of_R=lambda R: 1)
+                        parttmp.append(FC)
+                        print(f'm = {m}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}')   #?
+        #               outfile.write(f'm = {m}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}\n')   #?
+                res_fin.insert(0,tmp)
+                if partial_GamR: res_fin_woVR.insert(0,parttmp)
+
+                if (R_start > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req
+                    if (all(np.abs( gs_res[k][0]) < threshold for k in range(0, n_gs_max+1)) and
+                        all(np.abs(res_fin[0][m]) < threshold for m in range(0,n_fin_max+1)) ): # To keep consistency, the res_fin_woVR are not included in this check
+                        if (thresh_flag != -1):     # -1 can only occur at lowest R_start values (once any FC > threshold: flag is set to 0, then stays >= 0) -> dont stop calc right at start just bc FC are small there
+                            thresh_flag = thresh_flag + 1
+                    else:
+                        thresh_flag = 0         # If any FC overlap > threshold, reset flag -> only (lambda-)consecutive threshold check passes shall stop calc
+                print(f'thresh_flag = {thresh_flag}')                                                                               #?
+        #        outfile.write(f'thresh_flag = {thresh_flag}\n')                                                                               #?
+                R_start = R_start + R_hyp_step_res
+    
+            n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
+            for E_l in E_lambdas:
+                for n_fin in range(len(E_mus)-1, -1, -1):           # Loop over E_mus from back to start
+                    if (E_fin_au + E_mus[n_fin] <= Er_au + E_l):    # The highest (i.e. first, since loop starts at high n_fin) n_fin for which (E_fin + E_mu <= E_res + E_l) is n_fin_max for this l
+                        n_fin_max_list.append(n_fin)
+                        break
+            n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
+            n_res_max_X = len(E_lambdas) - 1
 
 # print FC integrals
 #   gs-res
