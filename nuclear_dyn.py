@@ -680,8 +680,8 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                 if partial_GamR: res_fin_woVR.insert(0,parttmp)
 
                 if (R_start > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req
-                    if (all(np.abs( gs_res[k][0]) < threshold for k in range(0, n_gs_max+1)) and
-                        all(np.abs(res_fin[0][m]) < threshold for m in range(0,n_fin_max+1)) ): # To keep consistency, the res_fin_woVR are not included in this check
+                    if (all(np.abs( gs_res[k][0]) < threshold_res for k in range(0, n_gs_max+1)) and
+                        all(np.abs(res_fin[0][m]) < threshold_res for m in range(0,n_fin_max+1)) ): # To keep consistency, the res_fin_woVR are not included in this check
                         if (thresh_flag != -1):     # -1 can only occur at lowest R_start values (once any FC > threshold: flag is set to 0, then stays >= 0) -> dont stop calc right at start just bc FC are small there
                             thresh_flag = thresh_flag + 1
                     else:
@@ -717,8 +717,8 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                 E_lambdas.insert(0,E_lambda)        # Present loop starts at high energies, but these shall get high lambda numbers = stand at the end of the lists -> fill lists from right to left
                 E_mu = fin_hyp_a / R_start_fin
                 E_mus.insert(0,E_mu)
-                print(f'--- R_start = {R_start:7.4f} au = {sciconv.bohr_to_angstrom(R_start):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###\n    E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start_res - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}')    #?
-        #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_lambda = {E_lambda:5.5f} au = {sciconv.hartree_to_ev(E_lambda):5.5f} eV,\n  E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV, steps: {int((R_start_res - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}\n')  #?
+                print(f'--- R_start_res = {R_start_res:7.4f} au = {sciconv.bohr_to_angstrom(R_start_res):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###\n R_start_fin = {R_start_fin:7.4f} au = {sciconv.bohr_to_angstrom(R_start_fin):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start_res - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}')    #?
+        #        outfile.write(f'--- R_start_res = {R_start_res:7.4f} au = {sciconv.bohr_to_angstrom(R_start_res):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###\n R_start_fin = {R_start_fin:7.4f} au = {sciconv.bohr_to_angstrom(R_start_fin):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start_res - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}\n')  #?
                 for k in range(0,n_gs_max+1):
                     FC = wf.mp_FCmor_hyp(k,gs_a,gs_Req,gs_de,red_mass,
                                 res_hyp_a,res_hyp_b,R_start_res,R_min,R_max)
@@ -731,8 +731,8 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                     print(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}')   #?
         #            outfile.write(f'k = {k}, gs_fin  = {FC: 10.10E}, |gs_fin|  = {np.abs(FC):10.10E}\n')   #?
 
-                if (R_start > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req
-                    if (all(np.abs( gs_res[k][0]) < threshold for k in range(0, n_gs_max+1)) and
+                if (min(R_start_res,R_start_fin) > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req
+                    if (all(np.abs( gs_res[k][0]) < threshold_res for k in range(0, n_gs_max+1)) and
                         all(np.abs( gs_fin[k][0]) < threshold for k in range(0, n_gs_max+1)) ): # Because neither n_res_max nor n_fin_max is known yet, the res_fin will not be used for the cut-off decision
                         if (thresh_flag != -1):     # -1 can only occur at lowest R_start values (once any FC > threshold: flag is set to 0, then stays >= 0) -> dont stop calc right at start just bc FC are small there
                             thresh_flag = thresh_flag + 1
@@ -757,7 +757,7 @@ else:           # If no args.fc, report integration bounds and calculate FCs
         #            outfile.write(f'l = {l}, m = {m}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}\n')   #?
                     if partial_GamR:
                         FC = FCfunc_lm(fin_hyp_a,fin_hyp_b,R_start_fin,red_mass,
-                                    res_hyp_a,res_hyp_b,R_start,R_min,R_max,
+                                    res_hyp_a,res_hyp_b,R_start_res,R_min,R_max,
                                     V_of_R=lambda R: 1)
                         parttmp.append(FC)
                         print(f'l = {l}, m = {m}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}')   #?
@@ -835,20 +835,35 @@ outfile.write('\n' + '----------------------------------------------------------
 outfile.write("Franck-Condon overlaps between final and resonance state" + '\n')
 outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
 
-for l in (range(0,n_res_max+1) if (res_pot_type == 'morse') else [0,n_res_max_X]):
+for l in (range(0,n_res_max+1) if (res_pot_type == 'morse') else range(0,n_res_max_X+1)):
     if (fin_pot_type in ('hyperbel','hypfree')):
         n_fin_max = n_fin_max_list[l]
     for m in range(0,n_fin_max+1):
         FC = res_fin[l][m]
         outfile.write('{:5d}  {:5d}  {: 14.10E}\n'.format(l,m,FC))
         if (fin_pot_type == 'morse'):
-            print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+            if (res_pot_type == 'morse'):
+                print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+            elif (res_pot_type == 'hyperbel'):
+                if (l == 0 or l == n_res_max_X-1 or l == n_res_max_X):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                elif (l == 1):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    print('   ...')
         elif (fin_pot_type in ('hyperbel','hypfree')):
-            if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
-                print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
-            elif (m == 1):
-                print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
-                print('   ...')
+            if (res_pot_type == 'morse'):
+                if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                elif (m == 1):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    print('   ...')
+            elif (res_pot_type == 'hyperbel'):
+                if (l == 0 and m == 0):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    print('   ...')
+                elif (l == n_res_max_X and m == n_fin_max):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+
 if (res_pot_type == 'hyperbel'):
     print("All overlaps between ground or final state and resonance state\n outside the indicated quantum numbers are considered zero")
     outfile.write("All overlaps between ground or final state and resonance state\n outside the indicated quantum numbers are considered zero\n")
@@ -865,20 +880,34 @@ if partial_GamR:
     print('n_res  ' +'n_fin  ' + '<fin|res>')
     outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
     
-    for l in (range(0,n_res_max+1) if (res_pot_type == 'morse') else [0,n_res_max_X]):
+    for l in (range(0,n_res_max+1) if (res_pot_type == 'morse') else range(0,n_res_max_X+1)):
         if (fin_pot_type in ('hyperbel','hypfree')):
             n_fin_max = n_fin_max_list[l]
         for m in range(0,n_fin_max+1):
             FC = res_fin_woVR[l][m]
             outfile.write('{:5d}  {:5d}  {: 14.10E}\n'.format(l,m,FC))
             if (fin_pot_type == 'morse'):
-                print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                if (res_pot_type == 'morse'):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                elif (res_pot_type == 'hyperbel'):
+                    if (l == 0 or l == n_res_max_X-1 or l == n_res_max_X):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    elif (l == 1):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                        print('   ...')
             elif (fin_pot_type in ('hyperbel','hypfree')):
-                if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
-                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
-                elif (m == 1):
-                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
-                    print('   ...')
+                if (res_pot_type == 'morse'):
+                    if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    elif (m == 1):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                        print('   ...')
+                elif (res_pot_type == 'hyperbel'):
+                    if (l == 0 and m == 0):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                        print('   ...')
+                    elif (l == n_res_max_X and m == n_fin_max):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
     print('These additional overlaps without the V(R) dependence are used\n only in',
             'the prefactors to the time integrals' if (partial_GamR == 'exp') else 'the calculation of the W_lambda values')
     outfile.write('These additional overlaps without the V(R) dependence are used\n only in '

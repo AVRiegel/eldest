@@ -370,5 +370,14 @@ def mp_FChyp_hyp(V1a,V1b,R_start1,red_mass,V2a,V2b,R_start2,R_min,R_max,**kwargs
     return complex(FC)
 
 
+def mp_FChyp_freehyp(V1a,V1b,R_start1,red_mass,V2a,V2b,R_start2,R_min,R_max,**kwargs):
+    maxdeg = kwargs.get("maxdegree", 50)
+    V_of_R = kwargs.get("V_of_R", lambda R: 1)
+    func = lambda R: (mpmath.conj(mp_psi_hyp(R,V1a,V1b,red_mass,R_start1))
+                                * mp_psi_freehyp(R,V2a,V2b,red_mass,R_start2) * V_of_R(R) )
+    tmp = mpmath.quad(func, [R_min, R_max], maxdegree=maxdeg, error=True)
+    FC = tmp[0]
+    return complex(FC)
+
 #R_min = sc.angstrom_to_bohr(1.5)
 #R_max = sc.angstrom_to_bohr(30.0)
