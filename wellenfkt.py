@@ -11,7 +11,7 @@
 ##########################################################################
 
 import mpmath
-from mpmath import coulombf, coulombg
+from mpmath import coulombf, coulombg, whitw
 import numpy as np
 import scipy.integrate as integrate
 from scipy.special import factorial
@@ -290,6 +290,7 @@ def mp_psi_free(R,a,b,red_mass,R_start,phase=0):    # model: free particle with 
     psi = norm * mpmath.exp(1.j * (K_au * (R - R_start) + phase))
     return psi
 
+
 def mp_psi_hyp(R,a,b,red_mass,R_start):        # model: particle in a hyperbolic potential a/R + b, energy chosen to be a/R_start
     a_eV = sc.hartree_to_ev(sc.bohr_to_angstrom(a))
     b_eV = sc.hartree_to_ev(b)
@@ -302,6 +303,16 @@ def mp_psi_hyp(R,a,b,red_mass,R_start):        # model: particle in a hyperbolic
     #func = coulombg(l = 0, eta = eta, z = z) + 1.j * coulombf(l = 0, eta = eta, z = z)      # lin comb chosen so that psi->exp[iKx] for x->inf (up to a constant phase shift)
     psi = norm * func
     return psi
+
+
+def mp_psi_contmor(R,E,alpha,Req,red_mass,De):      # model: Continuum eigenfunctions of Morse potential (with V(inf) = De)
+    d = mpmath.sqrt(2 * red_mass * De) / alpha
+    mu = mpmath.sqrt(2 *red_mass * (E - De)) / alpha    # subtract De from E because psi below is for V(inf) = 0
+    eta = 2 * d * mpmath.exp(-alpha * (R - Req))
+    norm = mpmath.fabs(mpmath.gamma(0.5 - d + 1j*mu)) / mpmath.fabs(mpmath.gamma(2j*mu)) * mpmath.sqrt(red_mass/(2 * mpmath.pi * alpha * mu))   # norm factor for energy normalization: int dR psi*(R,E) psi(R,E') = delta(E-E')
+    psi = norm * mpmath.root(eta,-2) * whitw(d, 1j*mu, eta, maxterms=10**6)      # so psi is bound for eta->inf
+    return psi
+
 
 
 ## Integrals with mpmath instead of numpy
@@ -378,6 +389,26 @@ def mp_FChyp_freehyp(V1a,V1b,R_start1,red_mass,V2a,V2b,R_start2,R_min,R_max,**kw
     tmp = mpmath.quad(func, [R_min, R_max], maxdegree=maxdeg, error=True)
     FC = tmp[0]
     return complex(FC)
+
+
+def mp_FCmor_contmor(n1,alpha1,Req1,De1,red_mass,E,alpha2,Req2,De2,R_min,R_max,**kwargs):
+    maxdeg = kwargs.get("maxdegree", 50)
+    V_of_R = kwargs.get("V_of_R", lambda R: 1)
+    func = lambda R: (mpmath.conj(mp_psi_n(R,n1,alpha1,Req1,red_mass,De1))
+                                * mp_psi_contmor(R,E,alpha2,Req2,red_mass,De2) * V_of_R(R) )
+    tmp = mpmath.quad(func, [R_min, R_max], maxdegree=maxdeg, error=True)
+    FC = tmp[0]
+    return complex(FC), complex(tmp[1])
+
+
+def mp_FChyp_contmor(V1a,V1b,R_start,red_mass,E,alpha2,Req2,De2,R_min,R_max,**kwargs):
+    maxdeg = kwargs.get("maxdegree", 50)
+    V_of_R = kwargs.get("V_of_R", lambda R: 1)
+    func = lambda R: (mpmath.conj(mp_psi_hyp(R,V1a,V1b,red_mass,R_start))
+                                * mp_psi_contmor(R,E,alpha2,Req2,red_mass,De2) * V_of_R(R) )
+    tmp = mpmath.quad(func, [R_min, R_max], maxdegree=maxdeg, error=True)
+    FC = tmp[0]
+    return complex(FC), complex(tmp[1])
 
 #R_min = sc.angstrom_to_bohr(1.5)
 #R_max = sc.angstrom_to_bohr(30.0)
