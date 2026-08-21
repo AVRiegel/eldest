@@ -692,17 +692,15 @@ else:           # If no args.fc, report integration bounds and calculate FCs
 
         elif (fin_pot_type in ('hyperbel','hypfree')):
             print('''####################\n####################\n####################\n
-            BOTH RESONANCE AND FINAL STATE HAVE CONTINUUM STATES\n
+            BOTH RESONANCE AND FINAL STATE HAVE CONTINUUM STATES.\n
             CALCULATING RESONANCE--FINAL FRANCK-CONDON FACTORS\n
             MAY TAKE A VERY LONG TIME!!!\n
-            YE BE WARNED!
-            ####################\n####################\n####################''')
+            YE BE WARNED!\n####################\n####################\n####################''')
             outfile.write('''####################\n####################\n####################\n
-            BOTH RESONANCE AND FINAL STATE HAVE CONTINUUM STATES\n
+            BOTH RESONANCE AND FINAL STATE HAVE CONTINUUM STATES.\n
             CALCULATING RESONANCE--FINAL FRANCK-CONDON FACTORS\n
             MAY TAKE A VERY LONG TIME!!!\n
-            YE BE WARNED!
-            ####################\n####################\n####################\n''')
+            YE BE WARNED!\n####################\n####################\n####################\n''')
             FCfunc_km = wf.mp_FCmor_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FCmor_freehyp
             FCfunc_lm = wf.mp_FChyp_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FChyp_freehyp
             for k in range(0,n_gs_max+1):   # prepare the (empty) sub-lists
