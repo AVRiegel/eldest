@@ -791,9 +791,9 @@ elif (Xshape == 'infinite'):
 # technical definitions of functions (remember: FX is the field strength EX)
 #direct ionization
 fun_t_dir_1 = lambda t1: FX_t1(t1)   * np.exp(1j * E_fin_au * (t1-t_au)) \
-                                     * np.exp(1j * E_kin_au * (t1-t_au))        # Note: before any of these fncts are called, E_fin is redefined to also include E_mu
+                                     * np.exp(1j * (E_kin_au + E_p_au) * (t1-t_au))        # Note: before any of these fncts are called, E_fin is redefined to also include E_mu
 fun_TX2_dir_1 = lambda t1: FX_t1(t1) * np.exp(1j * E_fin_au * (t1-t_au)) \
-                                     * np.exp(1j * E_kin_au * (t1-t_au))        # Same as fun_t_dir_1 - why keep ?
+                                     * np.exp(1j * (E_kin_au + E_p_au) * (t1-t_au))        # Same as fun_t_dir_1 - why keep ?
 
 #res_inner_fun = lambda t2: np.exp(-t2 * (np.pi * W_au + 1j*(Er_au))) \
 #                           * IR_during(t2)
