@@ -774,6 +774,14 @@ else:           # If no args.fc, report integration bounds and calculate FCs
         n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
         n_res_max_X = len(E_lambdas) - 1
 
+
+# re-define upper quantum numbers for hyp potentials
+if (res_pot_type == 'hyperbel'):
+    n_res_max = n_res_max_X
+if (fin_pot_type in ('hyperbel','hypfree')):
+    n_fin_max = n_fin_max_X
+
+
 # print FC integrals
 #   gs-res
 print()
@@ -784,8 +792,7 @@ outfile.write('\n' + '----------------------------------------------------------
 outfile.write("Franck-Condon overlaps between ground and resonance state" + '\n')
 outfile.write('n_gs  ' + 'n_res  ' + '<res|gs>' + '\n')
 
-if (res_pot_type == 'hyperbel'):
-    n_res_max = n_res_max_X
+
 for k in range(0,n_gs_max+1):
     for l in range(0,n_res_max+1):
         FC = gs_res[k][l]
@@ -805,12 +812,9 @@ print('-----------------------------------------------------------------')
 print("Franck-Condon overlaps between ground and final state")
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
 outfile.write("Franck-Condon overlaps between ground and final state" + '\n')
-
 print('n_gs  ' +'n_fin  ' + '<fin|gs>')
 outfile.write('n_gs  ' +'n_fin  ' + '<fin|gs>' + '\n')
 
-if (fin_pot_type in ('hyperbel','hypfree')):
-    n_fin_max = n_fin_max_X
 for k in range(0,n_gs_max+1):
     for m in range(0,n_fin_max+1):
         FC = gs_fin[k][m]
@@ -833,7 +837,7 @@ outfile.write('\n' + '----------------------------------------------------------
 outfile.write("Franck-Condon overlaps between final and resonance state" + '\n')
 outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
 
-for l in (range(0,n_res_max+1) if (res_pot_type == 'morse') else range(0,n_res_max_X+1)):
+for l in range(0,n_res_max+1):
     if (fin_pot_type in ('hyperbel','hypfree')):
         n_fin_max = n_fin_max_list[l]
     for m in range(0,n_fin_max+1):
@@ -878,7 +882,7 @@ if partial_GamR:
     print('n_res  ' +'n_fin  ' + '<fin|res>')
     outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
     
-    for l in (range(0,n_res_max+1) if (res_pot_type == 'morse') else range(0,n_res_max_X+1)):
+    for l in range(0,n_res_max+1):
         if (fin_pot_type in ('hyperbel','hypfree')):
             n_fin_max = n_fin_max_list[l]
         for m in range(0,n_fin_max+1):
@@ -953,7 +957,14 @@ for l in range (0,n_res_max+1):
             tmp = tmp + VEr_au_woVR**2 * np.abs(res_fin_woVR[l][m])**2 * factor
     W_lambda.append(tmp)
     ttmp = 1./ (2*np.pi*tmp)        # lifetime tau_l = 1 / (2 pi W_l)
-    print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+    if res_pot_type == 'morse':
+        print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+    elif res_pot_type == 'hyperbel':
+        if (l == 0 or l == n_res_max_X-1 or l == n_res_max_X):
+            print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+        elif (l == 1):
+            print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+            print('   ...')
     outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}\n')
 print()
 outfile.write('\n')
@@ -1086,15 +1097,17 @@ while (E_p_au <= Ep_max_au):
 #-------------------------------------------------------------------------
 # constants / prefactors
 prefac_dir1 = 1j * cdg_au_V
+if res_pot_type == 'morse':
+    denom = n_res_max + 1
+elif res_pot_type == 'hyperbel':
+    denom = R_hyp_step_res * np.sum(np.array(E_lambdas)**2 / res_hyp_a)
 if not partial_GamR == 'exp':
-    prefac_res1 = VEr_au * rdg_au / (n_res_max + 1)
-    prefac_indir1 = -1j * np.pi * VEr_au**2 * cdg_au_V / (n_res_max + 1)
+    prefac_res1 = VEr_au * rdg_au / denom
+    prefac_indir1 = -1j * np.pi * VEr_au**2 * cdg_au_V / denom
 else:
-    prefac_res1 = VEr_au_woVR * rdg_au / (n_res_max + 1)
-    prefac_indir1 = -1j * np.pi * VEr_au_woVR**2 * cdg_au_V / (n_res_max + 1)
+    prefac_res1 = VEr_au_woVR * rdg_au / denom
+    prefac_indir1 = -1j * np.pi * VEr_au_woVR**2 * cdg_au_V / denom
 
-if (fin_pot_type in ('hyperbel','hypfree')):
-    n_fin_max = n_fin_max_X
 
 # for wavepacket in resonance state(s) (as list comprehension)
 wp_prefs = [(1.j/(n_res_max+1) * rdg_au * gs_res[0][nlambda] \
@@ -1163,6 +1176,11 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                             continue
                         E_lambda = E_lambdas[nlambda]
                         W_au = W_lambda[nlambda]
+                        if (res_pot_type == 'morse'):
+                            factor_res = 1
+                        elif (res_pot_type == 'hyperbel'):
+                            factor_res = R_hyp_step_res * E_lambda**2 / res_hyp_a
+                        
                         if (integ_outer == "quadrature"):
                             res_I = ci.complex_quadrature(res_outer_fun, (-TX_au/2), t_au)
         
@@ -1192,8 +1210,8 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                                             * indir_FCsums[nlambda] * res_fin_woVR[nlambda][nmu])
         
                         J = (J
-                             + res_J1
-                             + indir_J1
+                             + res_J1 * factor_res
+                             + indir_J1 * factor_res
                              )
         
                     # Total trs prob (@E_kin, t) = sum_mu |J_mu|**2
@@ -1304,6 +1322,11 @@ while (t_au >= TX_au/2\
                             continue
                         E_lambda = E_lambdas[nlambda]
                         W_au = W_lambda[nlambda]
+                        if (res_pot_type == 'morse'):
+                            factor_res = 1
+                        elif (res_pot_type == 'hyperbel'):
+                            factor_res = R_hyp_step_res * E_lambda**2 / res_hyp_a
+
                         if (integ_outer == "quadrature"):
                             res_I = ci.complex_quadrature(res_outer_fun, (-TX_au/2), TX_au/2)
                             
@@ -1336,8 +1359,8 @@ while (t_au >= TX_au/2\
     
     
                         J = (J
-                             + res_J1
-                             + indir_J1
+                             + res_J1 * factor_res
+                             + indir_J1 *factor_res
                              )
         
                     # Total trs prob (@E_kin, t) = sum_mu |J_mu|**2

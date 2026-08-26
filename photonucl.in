@@ -65,10 +65,10 @@ gs_a          = 1.5
 gs_Req        = 6.0
 gs_const      = 0.0
 # resonance-state parameters
-res_a         = 0.0183747        # for morse: res_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)                                                    
-res_b         = 15.3994          # for morse: res_a; for hyperbel or hypfree: V_b in au (Hartree)
-res_c         = 6.0              # for morse: res_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (res_a/R_start) in au (Bohr)
-res_d         = 0.0              # for morse: res_const; for hyperbel or hypfree: FC factor threshold for calculating the trs integral
+res_a         = 0.0183747        # for morse: res_de; for hyperbel: V_a in au (Hartree * Bohr)                                                    
+res_b         = 15.3994          # for morse: res_a; for hyperbel: V_b in au (Hartree)
+res_c         = 6.0              # for morse: res_Req; for hyperbel: step width for R_start for vibrational energies (res_a/R_start) in au (Bohr)
+res_d         = 0.0              # for morse: res_const; for hyperbel: FC factor threshold for calculating the trs integral
 res_pot_type  = morse            # options: morse, hyperbel
 # final-state parameters
 fin_a         = 0.0833354        # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
