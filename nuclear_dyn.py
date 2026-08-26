@@ -693,14 +693,14 @@ else:           # If no args.fc, report integration bounds and calculate FCs
         elif (fin_pot_type in ('hyperbel','hypfree')):
             print('''####################\n####################\n####################\n
             BOTH RESONANCE AND FINAL STATE HAVE CONTINUUM STATES.\n
-            CALCULATING RESONANCE--FINAL FRANCK-CONDON FACTORS\n
+            CALCULATING RESONANCE-FINAL FRANCK-CONDON FACTORS\n
             MAY TAKE A VERY LONG TIME!!!\n
-            YE BE WARNED!\n####################\n####################\n####################''')
-            outfile.write('''####################\n####################\n####################\n
-            BOTH RESONANCE AND FINAL STATE HAVE CONTINUUM STATES.\n
-            CALCULATING RESONANCE--FINAL FRANCK-CONDON FACTORS\n
-            MAY TAKE A VERY LONG TIME!!!\n
-            YE BE WARNED!\n####################\n####################\n####################\n''')
+            YE BE WARNED!\n\n####################\n####################\n####################''')
+            # outfile.write('''####################\n####################\n####################\n
+            # BOTH RESONANCE AND FINAL STATE HAVE CONTINUUM STATES.\n
+            # CALCULATING RESONANCE-FINAL FRANCK-CONDON FACTORS\n
+            # MAY TAKE A VERY LONG TIME!!!\n
+            # YE BE WARNED!\n\n####################\n####################\n####################\n''')
             FCfunc_km = wf.mp_FCmor_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FCmor_freehyp
             FCfunc_lm = wf.mp_FChyp_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FChyp_freehyp
             for k in range(0,n_gs_max+1):   # prepare the (empty) sub-lists
@@ -715,8 +715,8 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                 E_lambdas.insert(0,E_lambda)        # Present loop starts at high energies, but these shall get high lambda numbers = stand at the end of the lists -> fill lists from right to left
                 E_mu = fin_hyp_a / R_start_fin
                 E_mus.insert(0,E_mu)
-                print(f'--- R_start_res = {R_start_res:7.4f} au = {sciconv.bohr_to_angstrom(R_start_res):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###\n R_start_fin = {R_start_fin:7.4f} au = {sciconv.bohr_to_angstrom(R_start_fin):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start_res - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}')    #?
-        #        outfile.write(f'--- R_start_res = {R_start_res:7.4f} au = {sciconv.bohr_to_angstrom(R_start_res):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###\n R_start_fin = {R_start_fin:7.4f} au = {sciconv.bohr_to_angstrom(R_start_fin):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start_res - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}\n')  #?
+                print(f'--- R_start_res = {R_start_res:7.4f} au = {sciconv.bohr_to_angstrom(R_start_res):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###\n    R_start_fin = {R_start_fin:7.4f} au = {sciconv.bohr_to_angstrom(R_start_fin):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start_res - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}')    #?
+        #        outfile.write(f'--- R_start_res = {R_start_res:7.4f} au = {sciconv.bohr_to_angstrom(R_start_res):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###\n    R_start_fin = {R_start_fin:7.4f} au = {sciconv.bohr_to_angstrom(R_start_fin):7.4f} A   ###   E_mu = {E_mu:7.5f} au = {sciconv.hartree_to_ev(E_mu):7.4f} eV   ###   steps: {int((R_start_res - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}\n')  #?
                 for k in range(0,n_gs_max+1):
                     FC = wf.mp_FCmor_hyp(k,gs_a,gs_Req,gs_de,red_mass,
                                 res_hyp_a,res_hyp_b,R_start_res,R_min,R_max)
@@ -742,11 +742,11 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                 R_start_fin = R_start_fin + R_hyp_step
 
             R_start_res = R_start_EX_max_res        # Initialize R_start again at the lowest considered value
-            R_start_fin = R_start_EX_max_fin
-            for l in E_lambdas:        # res-fin
+            for l in range(len(E_lambdas)):        # res-fin
                 tmp = []
                 if partial_GamR: parttmp = []
-                for m in E_mus:
+                R_start_fin = R_start_EX_max_fin
+                for m in range(len(E_mus)):
                     FC = FCfunc_lm(fin_hyp_a,fin_hyp_b,R_start_fin,red_mass,
                                 res_hyp_a,res_hyp_b,R_start_res,R_min,R_max,
                                 V_of_R=V_of_R)
@@ -851,7 +851,8 @@ for l in range(0,n_res_max+1):
                     print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
                 elif (l == 1):
                     print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
-                    print('   ...')
+                    if (m == n_fin_max):
+                        print('   ...')
         elif (fin_pot_type in ('hyperbel','hypfree')):
             if (res_pot_type == 'morse'):
                 if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
@@ -939,9 +940,9 @@ outfile.write('\n' + '----------------------------------------------------------
 #-------------------------------------------------------------------------
 # determine total decay width matrix element
 print('Effective decay widths in eV and lifetimes in s:')
-print('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]')
+print('n_res  W_l [eV]          tau_l [s]         Gamma_l[eV]')
 outfile.write('Effective decay widths in eV and lifetimes in s:' + '\n')
-outfile.write('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]' + '\n')
+outfile.write('n_res  W_l [eV]          tau_l [s]         Gamma_l[eV]' + '\n')
 W_lambda = []   # [W_(l=0), W_(l=1), ...]
 for l in range (0,n_res_max+1):
     tmp = 0
@@ -958,14 +959,14 @@ for l in range (0,n_res_max+1):
     W_lambda.append(tmp)
     ttmp = 1./ (2*np.pi*tmp)        # lifetime tau_l = 1 / (2 pi W_l)
     if res_pot_type == 'morse':
-        print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+        print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}  {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
     elif res_pot_type == 'hyperbel':
         if (l == 0 or l == n_res_max_X-1 or l == n_res_max_X):
-            print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+            print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}  {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
         elif (l == 1):
-            print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+            print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}  {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
             print('   ...')
-    outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}\n')
+    outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}  {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}\n')
 print()
 outfile.write('\n')
 
