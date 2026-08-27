@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-08-18 AVR                                            #
+# last change: 2026-08-26 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -1111,8 +1111,8 @@ else:
 
 
 # for wavepacket in resonance state(s) (as list comprehension)
-wp_prefs = [(1.j/(n_res_max+1) * rdg_au * gs_res[0][nlambda] \
-               + mp.pi/(n_res_max+1) * VEr_au * cdg_au_V * indir_FCsums[nlambda])
+wp_prefs = [(1.j/denom * rdg_au * gs_res[0][nlambda] \
+               + mp.pi/denom * VEr_au * cdg_au_V * indir_FCsums[nlambda])
             for nlambda in range(n_res_max+1)]
 
 
@@ -1251,7 +1251,7 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
     for nlambda in range (0,n_res_max+1):
         E_lambda = E_lambdas[nlambda]
         W_au = W_lambda[nlambda]
-        wp_pref = wp_prefs[nlambda] 
+        wp_pref = wp_prefs[nlambda]
         E_p_au = Ep_min_au
         while (E_p_au <= Ep_max_au):
             wp_I = wp_res_int(t_au,t_au)
@@ -1400,7 +1400,7 @@ while (t_au >= TX_au/2\
     for nlambda in range (0,n_res_max+1):
         E_lambda = E_lambdas[nlambda]
         W_au = W_lambda[nlambda]
-        wp_pref = wp_prefs[nlambda] 
+        wp_pref = wp_prefs[nlambda]
         E_p_au = Ep_min_au
         while (E_p_au <= Ep_max_au):
             wp_I = wp_res_int(t_au,TX_au/2)

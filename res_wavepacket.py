@@ -19,6 +19,7 @@ import warnings
 warnings.filterwarnings(action='ignore', category=np.exceptions.ComplexWarning)
 
 import in_out
+import sciconv
 import wellenfkt as wf
 
 @contextmanager
@@ -69,18 +70,15 @@ else:
 with open(os.devnull, 'w') as dummyfile, silence_print():
     (X_ICD, X_RICD, _, _,
      _, _, _, _, _, _, _, _, _,
-     _, _, _, _, _, _,
+     Omega_eV, n_X, _, _, X_gauss, _,
      _, _, _, _, _, _, _, _, _,
      _, _, _, Ep_step_eV, _, _, Ep_min_eV, Ep_max_eV,
      _, _, _, _, _, _, _,
      mass1, mass2, _, _,
      _, _, _, _,
-     De, alpha, Req, _, res_pot_type,
+     res_a, res_b, res_c, _, res_pot_type,
      _, _, _, _, _
      ) = in_out.read_input(settings, dummyfile)
-
-if not res_pot_type == 'morse':
-    sys.exit('Only available for Morse potential as resonance-state potential at the moment.')
 
 outfile=f'wf_{infile}'
 
@@ -115,32 +113,57 @@ data = raw_data.loc[raw_data[1] == Ep_eV].reset_index(drop=True)
 data.drop(1,axis=1,inplace=True)
 data.columns = range(data.columns.size)
 
-# Morse potential
-red_mass = wf.red_mass_au(mass1,mass2)
-lambda_param_res = np.sqrt(2*red_mass*De) / alpha
-N_lambda = int(lambda_param_res - 0.5) + 1
-
 # Sort input by time and quantum number, repeat each line R_len times (each t and lambda evaluated at each R)
 data[2] = data[2].astype(complex)
+if np.any(np.isnan(data)) or np.any(np.isinf(data)):
+    print('!!! Beware, there is at least one invalid number in the input, which will hopefully be filtered out.')
 mata = data.sort_values([0,1]).reset_index(drop=True)
+N_lambda = int(mata[0].iloc[-1] + 1)
 sata = mata.loc[data.index.repeat(R_len)]
 sata[3] = np.tile(R_arr, len(data[0]))
+
+# Potential
+red_mass = wf.red_mass_au(mass1,mass2)
+if (res_pot_type == 'morse'):
+    De    = res_a
+    alpha = res_b
+    Req   = res_c
+    factors_res = [1] * N_lambda
+elif (res_pot_type == 'hyperbel'):
+    res_hyp_a       = res_a
+    res_hyp_b       = res_b
+    R_hyp_step_res  = res_c
+    if(X_gauss):
+        Omega_au  = sciconv.ev_to_hartree(Omega_eV)
+        sigma     = np.pi * n_X / (Omega_au * np.sqrt(np.log(2)))
+        sigma_E   = 1. / sigma
+        width_E   = 5 * sigma_E
+        EX_max_au = Omega_au + 0.5 * width_E
+    R_start_EX_max_res = res_hyp_a / (EX_max_au - res_hyp_b)
+    R_starts = np.array([R_start_EX_max_res+n*R_hyp_step_res for n in range(N_lambda)][::-1])
+    factors_res = R_hyp_step_res * res_hyp_a / R_starts**2
+else:
+    sys.exit("The type of resonance-state potential is not supported.")
 
 # At each point, multiply the WF of the vibrational state with the projection of the total WF on it
 sata[4] = complex(0)
 for n in range(N_lambda):
     s_down, s_up = n*len(data[0])//N_lambda, (n+1)*len(data[0])//N_lambda-1     # select block with the current quantum number n
-    sata.loc[s_down:s_up,4] = sata.loc[s_down:s_up,2] * wf.psi_n(sata.loc[s_down:s_up,3], int(data[0][n]), alpha, Req, red_mass, De)
+    if (res_pot_type == 'morse'):
+        wavefunction = np.vectorize(wf.mp_psi_n)(sata.loc[s_down:s_up,3], int(data[0][n]), alpha, Req, red_mass, De).astype(complex)
+    elif (res_pot_type == 'hyperbel'):
+        wavefunction = np.vectorize(wf.mp_psi_hyp)(sata.loc[s_down:s_up,3], res_hyp_a, res_hyp_b, red_mass, R_starts[n]).astype(complex)
+    sata.loc[s_down:s_up,4] = sata.loc[s_down:s_up,2] * wavefunction
 
 # Prepare an additional block for the whole resonance wavepacket, indicate by quantum number -1
 fata = pd.concat((sata, sata[sata[0] == 0].set_index(sata[sata[0] == 0].index + sata.index[-1] + 1)))
-fata.loc[len(data[0]):,0] = -1
+fata.loc[len(data[0]):,0] = -1  # loc with data[0] is equivalent to iloc with sata[0]
 
 # Add up the contributions at each R,t point to the whole resonance wavepacket at this point
 aata = np.array(fata[[3,1,0,4]])
-with np.nditer(np.arange(len(sata[0])//N_lambda)) as it:
-    for x in it:
-      aata[N_lambda*len(sata[0])//N_lambda + x][3] = sum(aata[n*len(sata[0])//N_lambda + x][3] for n in range(N_lambda))
+l_block_len = len(sata[0])//N_lambda
+for x in np.arange(l_block_len):
+    aata[N_lambda*l_block_len + x][3] = np.ma.masked_invalid([aata[n*l_block_len + x][3] * factors_res[n] for n in range(N_lambda)]).sum()
 
 # Write out the array
 pata = np.array((abs(aata[:,3])**2,)).T
@@ -152,8 +175,7 @@ np.savetxt(outfile, oata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15
 
 # Extract the total resonance-state wavepacket, restructure the file for pm3d and calc population & R expectation value
 outfile_pm3d=f'pm3d_{outfile}'
-step_width = len(sata[0])//N_lambda
-eata = oata[-step_width:]
+eata = oata[-l_block_len:]
 np.savetxt(outfile_pm3d, eata, delimiter='   ', fmt=['%10.7f', '% .7e', '% i', '% .15e'])
 subprocess.call(['sed', '-i', f'/^[[:space:]]*{f"{R_high:.7f}"}/G', outfile_pm3d])
 
@@ -166,7 +188,7 @@ np.savetxt(popfile, pop, delimiter='   ', fmt=['% .7e', '% .15e'])
 
 if args.lambda_indiv:
     for n in range(N_lambda):
-        eata_sub = oata[n*step_width:(n+1)*step_width]
+        eata_sub = oata[n*l_block_len:(n+1)*l_block_len]
         popfile_sub=f'pop_{n}_{infile}'
         pop_sub = pd.DataFrame() 
         for t in range(len(eata_sub)//len(R_arr)):
