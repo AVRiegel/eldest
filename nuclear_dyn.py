@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-08-27 AVR                                            #
+# last change: 2026-08-28 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -372,7 +372,7 @@ if (fin_pot_type in ('morse', 'morse_cont')):
         print("n_fin_max = ", n_fin_max)
     else:
         n_fin_bound_max = int(lambda_param_fin - 0.5)
-        print("n_fin_bound_max = ", n_fin_max, "  --- all higher states are continuum states")
+        print("n_fin_bound_max = ", n_fin_bound_max, "  --- all higher states are continuum states")
     E_mus = []
     print('n_fin  ' + 'E [au]            ' + 'E [eV]')
     outfile.write('n_fin  ' + 'E [au]            ' + 'E [eV]' + '\n')
@@ -387,6 +387,7 @@ if (fin_pot_type in ('morse', 'morse_cont')):
         def morse_V2R(V, alpha, Req, De, V0=0):
             return Req - mp.log(1+mp.sqrt((V-V0)/De))/alpha
         def morse_DOS(R, alpha, Req, De):
+            """dV_Morse/dR (< 0 for R < Req)"""
             return 2*De*alpha * (1 - mp.exp(-alpha * (R-Req))) * mp.exp(-alpha * (R-Req))
         factors_fin = [1] * (n_fin_bound_max+1)
         R_start_EX_max_fin = morse_V2R(EX_max_au, fin_a, fin_Req, fin_de, E_fin_au)
@@ -394,8 +395,8 @@ if (fin_pot_type in ('morse', 'morse_cont')):
         while R_start < fin_Req:
             E_mu = morse_R2V(R_start, fin_a, fin_Req, fin_de)
             dos  = morse_DOS(R_start, fin_a, fin_Req, fin_de)
-            E_mus.insert(n_fin_bound_max+1,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
-            factors_fin.insert(n_fin_bound_max+1,dos)
+            E_mus.insert(n_fin_bound_max+1, E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
+            factors_fin.insert(n_fin_bound_max+1, -dos * fin_const) # factor for summation over R_mu instead of integration over [E_]mu
             R_start = R_start + fin_const
         n_fin_max = len(E_mus) - 1
         for n in range (n_fin_bound_max+1,n_fin_max+1):
@@ -496,74 +497,50 @@ R_max = sciconv.angstrom_to_bohr(30.0)
 
 if args.fc:     # If an FC input file is provided, FC integrals will be read from it and their calculation skipped
     if (res_pot_type == 'morse'):
-        if (fin_pot_type == 'morse'):
-            gs_res, gs_fin, res_fin, _, _, _ = in_out.read_fc_input(args.fc)
-            if partial_GamR:
-                gs_res_woVR, gs_fin_woVR, res_fin_woVR, _, _, _ = in_out.read_fc_input(args.FC)
-                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and len(res_fin) == len(res_fin_woVR)):
-                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                    close_files()
-                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
-
-        elif (fin_pot_type in ('hyperbel','hypfree')):
-            gs_res, gs_fin, res_fin, n_res_max_X, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
+        gs_res, gs_fin, res_fin, _, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
+        if partial_GamR:
+            gs_res_woVR, gs_fin_woVR, res_fin_woVR, _, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
+            if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin
+                    and n_fin_max_list_woVR == n_fin_max_list and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
+                outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
+                                + ", fin_max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
+                                + ", fin_max_X: " + str(n_fin_max_X_woVR == n_fin_max_X)
+                                + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
+                close_files()
+                sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+        if (fin_pot_type in ('hyperbel','hypfree')):
             R_start = R_start_EX_max_fin        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
             for m in range(0,n_fin_max_X+1):
                 E_mu = fin_hyp_a / R_start
                 E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
                 R_start = R_start + R_hyp_step
-            if partial_GamR:
-                gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
-                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X
-                        and n_fin_max_list_woVR == n_fin_max_list and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
-                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
-                                  + ", res_max_X: " + str(n_res_max_X_woVR == n_res_max_X)
-                                  + ", fin_max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
-                                  + ", fin_max_X: " + str(n_fin_max_X_woVR == n_fin_max_X)
-                                  + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                    close_files()
-                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
 
     elif (res_pot_type == 'hyperbel'):
-        if (fin_pot_type == 'morse'):
-            gs_res, gs_fin, res_fin, n_res_max_X, _, _ = in_out.read_fc_input(args.fc)
-            R_start_res = R_start_EX_max_res        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step_res)
-            for l in range(0,n_res_max_X+1):
-                E_lambda = res_hyp_a / R_start_res
-                E_lambdas.insert(0,E_lambda)        # Present loop starts at high energies, but these shall get high lambda numbers = stand at the end of the lists -> fill lists from right to left
-                R_start_res = R_start_res + R_hyp_step_res
-            if partial_GamR:
-                gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, _, _ = in_out.read_fc_input(args.FC)
-                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X and len(res_fin) == len(res_fin_woVR)):
-                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
-                                  + ", res_max_X: " + str(n_res_max_X_woVR == n_res_max_X)
-                                  + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                    close_files()
-                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
-
-        elif (fin_pot_type in ('hyperbel','hypfree')):
-            gs_res, gs_fin, res_fin, n_res_max_X, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
+        gs_res, gs_fin, res_fin, n_res_max_X, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
+        if partial_GamR:
+            gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
+            if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X
+                    and n_fin_max_list_woVR == n_fin_max_list and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
+                outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
+                                + ", res_max_X: " + str(n_res_max_X_woVR == n_res_max_X)
+                                + ", fin_max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
+                                + ", fin_max_X: " + str(n_fin_max_X_woVR == n_fin_max_X)
+                                + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
+                close_files()
+                sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+        R_start_res = R_start_EX_max_res        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step_res)
+        for l in range(0,n_res_max_X+1):
+            E_lambda = res_hyp_a / R_start_res
+            E_lambdas.insert(0,E_lambda)        # Present loop starts at high energies, but these shall get high lambda numbers = stand at the end of the lists -> fill lists from right to left
+            R_start_res = R_start_res + R_hyp_step_res
+        if (fin_pot_type in ('hyperbel','hypfree')):
             R_start = R_start_EX_max_fin        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
             for m in range(0,n_fin_max_X+1):
                 E_mu = fin_hyp_a / R_start
                 E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
                 R_start = R_start + R_hyp_step
-            R_start_res = R_start_EX_max_res        # same for resonance states
-            for l in range(0,n_res_max_X+1):
-                E_lambda = res_hyp_a / R_start_res
-                E_lambdas.insert(0,E_lambda)
-                R_start_res = R_start_res + R_hyp_step_res
-            if partial_GamR:
-                gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_res_max_X_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
-                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_res_max_X_woVR == n_res_max_X
-                        and n_fin_max_list_woVR == n_fin_max_list and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
-                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
-                                  + ", res_max_X: " + str(n_res_max_X_woVR == n_res_max_X)
-                                  + ", fin_max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
-                                  + ", fin_max_X: " + str(n_fin_max_X_woVR == n_fin_max_X)
-                                  + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                    close_files()
-                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+
+
 
 else:           # If no args.fc, report integration bounds and calculate FCs
     # Integration bounds
@@ -604,21 +581,27 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                 tmp.append(FC)
             gs_res.append(tmp)
 
-        if (fin_pot_type == 'morse'):
+        if (fin_pot_type in ('morse','morse_cont')):
             for m in range(0,n_fin_max+1):      # ground state - final state <mu|kappa>   and   resonance state - final state <mu|lambda>
+                if fin_pot_type == 'morse' or (fin_pot_type == 'morse_cont' and m <= n_fin_bound_max):
+                    FCfunc = wf.mp_FCmor_mor
+                    var1 = lambda x: x  # The first variable in FCfunc is the quantum number itself for mor_mor but the vibr energy for contmor_mor
+                else:
+                    FCfunc = wf.mp_FCcontmor_mor
+                    var1 = lambda x: E_mus[x]
                 for k in range(0,n_gs_max+1):
-                    FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
-                                         k,gs_a,gs_Req,gs_de,R_min,R_max)
+                    FC = FCfunc(var1(m),fin_a,fin_Req,fin_de,red_mass,
+                                k,gs_a,gs_Req,gs_de,R_min,R_max)
                     gs_fin[k].append(FC)
                 for l in range(0,n_res_max+1):
-                    FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
-                                         l,res_a,res_Req,res_de,R_min,R_max,
-                                         V_of_R=V_of_R)      # Gamma(R) dependence only influences res-fin FC integrals (interaction mediated by V)
+                    FC = FCfunc(var1(m),fin_a,fin_Req,fin_de,red_mass,
+                                l,res_a,res_Req,res_de,R_min,R_max,
+                                V_of_R=V_of_R)      # Gamma(R) dependence only influences res-fin FC integrals (interaction mediated by V)
                     res_fin[l].append(FC)
                     if partial_GamR:
-                        FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
-                                             l,res_a,res_Req,res_de,R_min,R_max,
-                                             V_of_R=lambda R: 1)
+                        FC = FCfunc(var1(m),fin_a,fin_Req,fin_de,red_mass,
+                                    l,res_a,res_Req,res_de,R_min,R_max,
+                                    V_of_R=lambda R: 1)
                         res_fin_woVR[l].append(FC)
 
         elif (fin_pot_type in ('hyperbel','hypfree')):
@@ -662,29 +645,33 @@ else:           # If no args.fc, report integration bounds and calculate FCs
         #        outfile.write(f'thresh_flag = {thresh_flag}\n')                                                                               #?
                 R_start = R_start + R_hyp_step
     
-            n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
-            for E_l in E_lambdas:
-                for n_fin in range(len(E_mus)-1, -1, -1):           # Loop over E_mus from back to start
-                    if (E_fin_au + E_mus[n_fin] <= Er_au + E_l):    # The highest (i.e. first, since loop starts at high n_fin) n_fin for which (E_fin + E_mu <= E_res + E_l) is n_fin_max for this l
-                        n_fin_max_list.append(n_fin)
-                        break
-            n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
 
 
     ##### If resonance state has repulsive Coulomb potential
     elif (res_pot_type == 'hyperbel'):
-        if (fin_pot_type == 'morse'):
+        if (fin_pot_type in ('morse','morse_cont')):
+            if (fin_pot_type == 'morse_cont'):
+                print('''####################\n####################\n####################\n
+                BOTH RESONANCE AND FINAL STATE HAVE CONTINUUM STATES.\n
+                CALCULATING RESONANCE-FINAL FRANCK-CONDON FACTORS\n
+                MAY TAKE A VERY LONG TIME!!!\n
+                YE BE WARNED!\n\n####################\n####################\n####################''')
             for k in range (0,n_gs_max+1):      # ground state - final state <mu|kappa>
                 tmp = []
                 for m in range (0,n_fin_max+1):
-                    FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
-                                         k,gs_a,gs_Req,gs_de,R_min,R_max)
+                    if fin_pot_type == 'morse' or (fin_pot_type == 'morse_cont' and m <= n_fin_bound_max):
+                        FCfunc = wf.mp_FCmor_mor
+                        var1 = lambda x: x  # The first variable in FCfunc is the quantum number itself for mor_mor but the vibr energy for contmor_mor
+                    else:
+                        FCfunc = wf.mp_FCcontmor_mor
+                        var1 = lambda x: E_mus[x]
+                    FC = FCfunc(var1(m),fin_a,fin_Req,fin_de,red_mass,
+                                k,gs_a,gs_Req,gs_de,R_min,R_max)
                     tmp.append(FC)
                 gs_fin.append(tmp)
 
             for k in range(0,n_gs_max+1):   # prepare the (empty) sub-lists
                 gs_res.append(list())
-            FCfunc = wf.mp_FCmor_hyp
             Req_max = max(gs_Req, fin_Req)
             R_start = R_start_EX_max_res        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
             thresh_flag = -1                # Initialize flag for FC-calc stop. Counts how often in a (lambda) row all FC fall below threshold
@@ -694,22 +681,28 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                 print(f'--- R_start = {R_start:7.4f} au = {sciconv.bohr_to_angstrom(R_start):7.4f} A   ###   E_lambda = {E_lambda:7.5f} au = {sciconv.hartree_to_ev(E_lambda):7.4f} eV   ###   steps: {int((R_start - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}')    #?
         #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_lambda = {E_lambda:5.5f} au = {sciconv.hartree_to_ev(E_lambda):5.5f} eV, steps: {int((R_start - R_start_EX_max_res) / R_hyp_step_res  + 0.1)}\n')  #?
                 for k in range(0,n_gs_max+1):
-                    FC = FCfunc(k,gs_a,gs_Req,gs_de,red_mass,
-                                res_hyp_a,res_hyp_b,R_start,R_min,R_max)
+                    FC = wf.mp_FCmor_hyp(k,gs_a,gs_Req,gs_de,red_mass,
+                                         res_hyp_a,res_hyp_b,R_start,R_min,R_max)
                     gs_res[k].insert(0,FC)
                     print(f'k = {k}, gs_res  = {FC: 10.10E}, |gs_res|  = {np.abs(FC):10.10E}')   #?
         #            outfile.write(f'k = {k}, gs_res  = {FC: 10.10E}, |gs_res|  = {np.abs(FC):10.10E}\n')   #?
                 tmp = []
                 if partial_GamR: parttmp = []
                 for m in range(0,n_fin_max+1):
-                    FC = FCfunc(m,fin_a,fin_Req,fin_de,red_mass,
+                    if fin_pot_type == 'morse' or (fin_pot_type == 'morse_cont' and m <= n_fin_bound_max):
+                        FCfunc = wf.mp_FCmor_hyp
+                        var1 = lambda x: x  # The first variable in FCfunc is the quantum number itself for mor_hyp but the vibr energy for contmor_hyp
+                    else:
+                        FCfunc = wf.mp_FCcontmor_hyp
+                        var1 = lambda x: E_mus[x]
+                    FC = FCfunc(var1(m),fin_a,fin_Req,fin_de,red_mass,
                                 res_hyp_a,res_hyp_b,R_start,R_min,R_max,
                                 V_of_R=V_of_R)
                     tmp.append(FC)
                     print(f'm = {m}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}')   #?
         #            outfile.write(f'm = {m}, res_fin = {FC: 10.10E}, |res_fin| = {np.abs(FC):10.10E}\n')   #?
                     if partial_GamR:
-                        FC = FCfunc(m,fin_a,fin_Req,fin_de,red_mass,
+                        FC = FCfunc(var1(m),fin_a,fin_Req,fin_de,red_mass,
                                     res_hyp_a,res_hyp_b,R_start,R_min,R_max,
                                     V_of_R=lambda R: 1)
                         parttmp.append(FC)
@@ -804,14 +797,15 @@ else:           # If no args.fc, report integration bounds and calculate FCs
                 if partial_GamR: res_fin_woVR.append(parttmp)
                 R_start_res = R_start_res + R_hyp_step_res
 
-        n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
-        for E_l in E_lambdas:
-            for n_fin in range(len(E_mus)-1, -1, -1):           # Loop over E_mus from back to start
-                if (E_fin_au + E_mus[n_fin] <= Er_au + E_l):    # The highest (i.e. first, since loop starts at high n_fin) n_fin for which (E_fin + E_mu <= E_res + E_l) is n_fin_max for this l
-                    n_fin_max_list.append(n_fin)
-                    break
-        n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
         n_res_max_X = len(E_lambdas) - 1
+
+    n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
+    for E_l in E_lambdas:
+        for n_fin in range(len(E_mus)-1, -1, -1):           # Loop over E_mus from back to start
+            if (E_fin_au + E_mus[n_fin] <= Er_au + E_l):    # The highest (i.e. first, since loop starts at high n_fin) n_fin for which (E_fin + E_mu <= E_res + E_l) is n_fin_max for this l
+                n_fin_max_list.append(n_fin)
+                break
+    n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
 
 
 # re-define upper quantum numbers for hyp potentials
@@ -860,6 +854,12 @@ for k in range(0,n_gs_max+1):
         outfile.write('{:4d}  {:5d}  {: 14.10E}\n'.format(k,m,FC))
         if (fin_pot_type == 'morse'):
             print(('{:4d}  {:5d}  {: 14.10E}'.format(k,m,FC)))
+        elif (fin_pot_type == 'morse_cont'):
+            if (m <= (n_fin_bound_max + 1) or m == n_fin_max-1 or m == n_fin_max):      # Don't print all the FC, just the first two and last two (per GS vibr state)
+                print(('{:4d}  {:5d}  {: 14.10E}'.format(k,m,FC)))
+            elif (m == (n_fin_bound_max + 2)):
+                print(('{:4d}  {:5d}  {: 14.10E}'.format(k,m,FC)))
+                print('  ...')
         elif (fin_pot_type in ('hyperbel','hypfree')):
             if (m == 0 or m == n_fin_max-1 or m == n_fin_max):      # Don't print all the FC, just the first two and last two (per GS vibr state)
                 print(('{:4d}  {:5d}  {: 14.10E}'.format(k,m,FC)))
@@ -877,7 +877,7 @@ outfile.write("Franck-Condon overlaps between final and resonance state" + '\n')
 outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
 
 for l in range(0,n_res_max+1):
-    if (fin_pot_type in ('hyperbel','hypfree')):
+    if (fin_pot_type in ('morse_cont','hyperbel','hypfree')):   # Actually, that should probably be done always
         n_fin_max = n_fin_max_list[l]
     for m in range(0,n_fin_max+1):
         FC = res_fin[l][m]
@@ -892,6 +892,19 @@ for l in range(0,n_res_max+1):
                     print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
                     if (m == n_fin_max):
                         print('   ...')
+        elif (fin_pot_type == 'morse_cont'):
+            if (res_pot_type == 'morse'):
+                if (m <= (n_fin_bound_max + 1) or m == n_fin_max-1 or m == n_fin_max):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                elif (m == (n_fin_bound_max + 2)):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    print('   ...')
+            elif (res_pot_type == 'hyperbel'):
+                if (l == 0 and m == 0):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    print('   ...')
+                elif (l == n_res_max_X and m == n_fin_max):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
         elif (fin_pot_type in ('hyperbel','hypfree')):
             if (res_pot_type == 'morse'):
                 if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
@@ -909,7 +922,7 @@ for l in range(0,n_res_max+1):
 if (res_pot_type == 'hyperbel'):
     print("All overlaps between ground or final state and resonance state\n outside the indicated quantum numbers are considered zero")
     outfile.write("All overlaps between ground or final state and resonance state\n outside the indicated quantum numbers are considered zero\n")
-if (fin_pot_type in ('hyperbel','hypfree')):
+if (fin_pot_type in ('morse_cont','hyperbel','hypfree')):
     print("All overlaps between ground or resonance state and final state\n outside the indicated quantum numbers are considered zero")
     outfile.write("All overlaps between ground or resonance state and final state\n outside the indicated quantum numbers are considered zero\n")
 
@@ -923,7 +936,7 @@ if partial_GamR:
     outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
     
     for l in range(0,n_res_max+1):
-        if (fin_pot_type in ('hyperbel','hypfree')):
+        if (fin_pot_type in ('morse_cont','hyperbel','hypfree')):
             n_fin_max = n_fin_max_list[l]
         for m in range(0,n_fin_max+1):
             FC = res_fin_woVR[l][m]
@@ -937,6 +950,19 @@ if partial_GamR:
                     elif (l == 1):
                         print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
                         print('   ...')
+            elif (fin_pot_type == 'morse_cont'):
+                if (res_pot_type == 'morse'):
+                    if (m <= (n_fin_bound_max + 1) or m == n_fin_max-1 or m == n_fin_max):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    elif (m == (n_fin_bound_max + 2)):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                        print('   ...')
+                elif (res_pot_type == 'hyperbel'):
+                    if (l == 0 and m == 0):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                        print('   ...')
+                    elif (l == n_res_max_X and m == n_fin_max):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
             elif (fin_pot_type in ('hyperbel','hypfree')):
                 if (res_pot_type == 'morse'):
                     if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
@@ -961,11 +987,14 @@ indir_FCsums = []
 for l in range (0,n_res_max+1):
     indir_FCsum = 0
     factor = 1
-    if (fin_pot_type in ('hyperbel','hypfree')):
+    if (fin_pot_type in ('morse_cont','hyperbel','hypfree')):
         n_fin_max = n_fin_max_list[l]
     for m in range (0, n_fin_max + 1):
-        if (fin_pot_type in ('hyperbel','hypfree')):            # R-DOS for 'integration' over R_mu instead of [E_]mu
+        if fin_pot_type == 'morse_cont':
+            factor = factors_fin[m]
+        elif (fin_pot_type in ('hyperbel','hypfree')):            # R-DOS for 'integration' over R_mu instead of [E_]mu
             factor = R_hyp_step * E_mus[m]**2 / fin_hyp_a
+
         if not partial_GamR == 'exp':
             tmp = np.conj(res_fin[l][m]) * gs_fin[0][m] * factor    # <mu|lambda>* <mu|kappa=0> = <lambda|mu><mu|kappa=0> = <l|m><m|k=0>
         else:   # If Gamma(R) only in exponent (i.e. Wl), then indir_FCsums is woVR since it is part of prefactor
@@ -989,8 +1018,11 @@ for l in range (0,n_res_max+1):
     if (fin_pot_type in ('hyperbel','hypfree')):
         n_fin_max = n_fin_max_list[l]       # To each lambda their own n_fin_max (v.s.)
     for m in range (0, n_fin_max + 1):
-        if (fin_pot_type in ('hyperbel','hypfree')):
+        if fin_pot_type == 'morse_cont':
+            factor = factors_fin[m]
+        elif (fin_pot_type in ('hyperbel','hypfree')):
             factor = R_hyp_step * np.array(E_mus[m])**2 / fin_hyp_a
+
         if not partial_GamR == 'pre':
             tmp = tmp + VEr_au**2 * np.abs(res_fin[l][m])**2 * factor      # W_l = sum_m ( VEr**2 |<m|l>|**2 ) for Morse or W_l = sum_m ( DeltaR R-DOS(m) VEr**2 |<m|l>|**2 ) for cont vibr fin states
         else:
@@ -1010,22 +1042,22 @@ print()
 outfile.write('\n')
 
 
-#-------------------------------------------------------------------------
-in_out.check_input(Er_au, E_fin_au, Gamma_au,
-                   Omega_au, TX_au, n_X, A0X,
-                   omega_au, TL_au, A0L, delta_t_au,
-                   tmax_au, timestep_au, E_step_au)
+# #-------------------------------------------------------------------------
+# in_out.check_input(Er_au, E_fin_au, Gamma_au,
+#                    Omega_au, TX_au, n_X, A0X,
+#                    omega_au, TL_au, A0L, delta_t_au,
+#                    tmax_au, timestep_au, E_step_au)
 #-------------------------------------------------------------------------
 # physical definitions of functions
 # functions for the shape of the XUV pulse
 if (X_sinsq):
     print('use sinsq function')
-    f_t1  = lambda t1: 1./4 * ( np.exp(2j * np.pi * (t1 + TX_au/2) / TX_au) # There should be a minus sign in front [from (1/2i)**2]
-                          + 2                                               # & this 2 be negative [sin**2 = (exp - exp*)**2 = exp**2 - 2 exp exp* + (exp*)**2]
+    f_t1  = lambda t1: -1./4 * ( np.exp(2j * np.pi * (t1 + TX_au/2) / TX_au)
+                          - 2
                           + np.exp(-2j * np.pi * (t1 + TX_au/2) /TX_au) )
     # fp_t1 = f'(t1)
-    fp_t1 = lambda t1: np.pi/(2j*TX_au) * ( - np.exp(2j*np.pi* (t1 + TX_au/2) / TX_au)  # Accordingly, these signs must be flipped
-                                         + np.exp(-2j*np.pi* (t1 + TX_au/2) / TX_au) )
+    fp_t1 = lambda t1: np.pi/(2j*TX_au) * ( np.exp(2j*np.pi* (t1 + TX_au/2) / TX_au)
+                                         - np.exp(-2j*np.pi* (t1 + TX_au/2) / TX_au) )
 elif (X_gauss):
     print('use gauss function')
     f_t1  = lambda t1: ( 1./ np.sqrt(2*np.pi * sigma**2)
@@ -1068,9 +1100,13 @@ fun_TX2_dir_1 = lambda t1: FX_t1(t1) * np.exp(1j * E_fin_au * (t1-t_au)) \
 #                           * IR_during(t2)
 
 if (integ == 'romberg'):                                                        # numerical inner int not possible (res_inner_fun deactivated) ?
-    res_inner = lambda t1: integrate.romberg(res_inner_fun, t1, t_au)
+    # res_inner = lambda t1: integrate.romberg(res_inner_fun, t1, t_au)
+    close_files()
+    sys.exit('Numerical inner integration currently unavailable.')
 elif (integ == 'quadrature'):
-    res_inner = lambda t1: integrate.quad(res_inner_fun, t1, t_au)[0]
+    # res_inner = lambda t1: integrate.quad(res_inner_fun, t1, t_au)[0]
+    close_files()
+    sys.exit('Numerical inner integration currently unavailable.')
 elif (integ == 'analytic'):
     # analytic inner integral
     res_inner = lambda t1: (1./(1j*(E_kin_au + E_fin_au - Er_au - E_lambda)     # See the above note on E_fin also including E_mu
@@ -1212,7 +1248,7 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                     # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
                     J = 0
                     for nlambda in range (0,n_res_max+1):
-                        if (fin_pot_type in ('hyperbel','hypfree') and nmu > n_fin_max_list[nlambda]):  # J_nondir,mu,lambda = 0 if repulsive |fin>|mu> lies higher than |res>|lambda>
+                        if (fin_pot_type in ('morse_cont','hyperbel','hypfree') and nmu > n_fin_max_list[nlambda]):  # J_nondir,mu,lambda = 0 if repulsive |fin>|mu> lies higher than |res>|lambda>
                             continue
                         E_lambda = E_lambdas[nlambda]
                         W_au = W_lambda[nlambda]
@@ -1258,13 +1294,14 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
                     # For cont rep fin: int (dE_mu |J_mu|**2 E-DOS(E_mu)) = int (dR_mu |J_mu|**2 R-DOS(R_mu))
                     #   R-DOS = E-DOS * Va / R_mu**2 = E-DOS * E_mu**2 / Va. If E-DOS = 1 & R_hyp_step = const: int (dR_mu |J_mu|**2 R-DOS) ~ sum_mu (R_hyp_step |J_mu|**2 E_mu**2 / Va)
                     square = np.absolute(J + dir_J1)**2     # |J_mu|**2
-                    if (fin_pot_type in ('hyperbel','hypfree')):
+                    if fin_pot_type == 'morse':
+                        factor = 1
+                    elif fin_pot_type == 'morse_cont':
+                        factor = factors_fin[nmu]
+                    elif (fin_pot_type in ('hyperbel','hypfree')):
                         factor = R_hyp_step * E_mus[nmu]**2 / fin_hyp_a
-                        old_square = square
-                        square = square * factor
+                    square = square * factor
                     sum_square = sum_square + square        # |J|**2 = sum_mu |J_mu|**2
-                    #print(f'nmu = {nmu:>3}  f = {factor:.5f}  osq = {old_square:.5E}  sq = {square:.5E}  sum = {sum_square:.5E}')
-                    #outfile.write(f'nmu = {nmu:>3}  f = {factor:.5f}  osq = {old_square:.5E}  sq = {square:.5E}  sum = {sum_square:.5E}\n')
     
                 squares = np.append(squares, sum_square)
     
@@ -1400,20 +1437,21 @@ while (t_au >= TX_au/2\
     
                         J = (J
                              + res_J1 * factor_res
-                             + indir_J1 *factor_res
+                             + indir_J1 * factor_res
                              )
         
                     # Total trs prob (@E_kin, t) = sum_mu |J_mu|**2
                     # For cont rep fin: int (dE_mu |J_mu|**2 E-DOS(E_mu)) = int (dR_mu |J_mu|**2 R-DOS(R_mu))
                     #   R-DOS = E-DOS * Va / R_mu**2 = E-DOS * E_mu**2 / Va. If E-DOS = 1 & R_hyp_step = const: int (dR_mu |J_mu|**2 R-DOS) ~ sum_mu (R_hyp_step |J_mu|**2 E_mu**2 / Va)
                     square = np.absolute(J + dir_J1)**2     # |J_mu|**2
-                    if (fin_pot_type in ('hyperbel','hypfree')):
+                    if fin_pot_type == 'morse':
+                        factor = 1
+                    elif fin_pot_type == 'morse_cont':
+                        factor = factors_fin[nmu]
+                    elif (fin_pot_type in ('hyperbel','hypfree')):
                         factor = R_hyp_step * E_mus[nmu]**2 / fin_hyp_a
-                        old_square = square
-                        square = square * factor
+                    square = square * factor
                     sum_square = sum_square + square        # |J|**2 = sum_mu |J_mu|**2
-                    #print(f'nmu = {nmu:>3}  f = {factor:.5f}  osq = {old_square:.5E}  sq = {square:.5E}  sum = {sum_square:.5E}')
-                    #outfile.write(f'nmu = {nmu:>3}  f = {factor:.5f}  osq = {old_square:.5E}  sq = {square:.5E}  sum = {sum_square:.5E}\n')
     
                 squares = np.append(squares, sum_square)
     

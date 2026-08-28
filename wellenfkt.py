@@ -391,21 +391,21 @@ def mp_FChyp_freehyp(V1a,V1b,R_start1,red_mass,V2a,V2b,R_start2,R_min,R_max,**kw
     return complex(FC)
 
 
-def mp_FCmor_contmor(n1,alpha1,Req1,De1,red_mass,E,alpha2,Req2,De2,R_min,R_max,**kwargs):
+def mp_FCcontmor_mor(E,alpha1,Req1,De1,red_mass,n2,alpha2,Req2,De2,R_min,R_max,**kwargs):
     maxdeg = kwargs.get("maxdegree", 50)
     V_of_R = kwargs.get("V_of_R", lambda R: 1)
-    func = lambda R: (mpmath.conj(mp_psi_n(R,n1,alpha1,Req1,red_mass,De1))
-                                * mp_psi_contmor(R,E,alpha2,Req2,red_mass,De2) * V_of_R(R) )
+    func = lambda R: (mpmath.conj(mp_psi_contmor(R,E,alpha1,Req1,red_mass,De1))
+                                * mp_psi_n(R,n2,alpha2,Req2,red_mass,De2) * V_of_R(R) )
     tmp = mpmath.quad(func, [R_min, R_max], maxdegree=maxdeg, error=True)
     FC = tmp[0]
     return complex(FC)
 
 
-def mp_FChyp_contmor(V1a,V1b,R_start,red_mass,E,alpha2,Req2,De2,R_min,R_max,**kwargs):
+def mp_FCcontmor_hyp(E,alpha1,Req1,De1,red_mass,V2a,V2b,R_start,R_min,R_max,**kwargs):
     maxdeg = kwargs.get("maxdegree", 50)
     V_of_R = kwargs.get("V_of_R", lambda R: 1)
-    func = lambda R: (mpmath.conj(mp_psi_hyp(R,V1a,V1b,red_mass,R_start))
-                                * mp_psi_contmor(R,E,alpha2,Req2,red_mass,De2) * V_of_R(R) )
+    func = lambda R: (mpmath.conj(mp_psi_contmor(R,E,alpha1,Req1,red_mass,De1)
+                                * mp_psi_hyp(R,V2a,V2b,red_mass,R_start)) * V_of_R(R) )
     tmp = mpmath.quad(func, [R_min, R_max], maxdegree=maxdeg, error=True)
     FC = tmp[0]
     return complex(FC)

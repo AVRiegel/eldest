@@ -710,7 +710,7 @@ def check_input(Er, E_fin, Gamma,
                 tmax, timestep, E_step):
     print('Input Check')
 
-    if (E_fin > Omega):
+    if (E_fin > Omega):         # BUT pulse is not single-freq, so as long as E_fin <= omega_max things should be fine
         exit('Warning: E_fin > Omega' + '\n'
              + 'Stopping Script')
 
