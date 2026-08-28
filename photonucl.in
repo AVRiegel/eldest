@@ -74,8 +74,8 @@ res_pot_type  = morse            # options: morse, hyperbel
 fin_a         = 0.0833354        # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
 fin_b         = 1.4699729        # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)
 fin_c         = 0.01890          # for morse: fin_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (fin_a/R_start) in au (Bohr)
-fin_d         = 1.E-05           # for morse: fin_const; for hyperbel or hypfree: FC factor threshold for calculating the trs integral
-fin_pot_type  = hyperbel         # options: morse, hyperbel, hypfree
+fin_d         = 1.E-05           # for morse: fin_const; for morse_cont: step width for R_start for vibrational energies in au (Bohr); for hyperbel or hypfree: FC factor threshold for calculating the trs integral
+fin_pot_type  = hyperbel         # options: morse, morse_cont (morse with continuum states), hyperbel, hypfree
 ## final-state parameters
 #fin_a         = 0.003675
 #fin_b         = 21.7512

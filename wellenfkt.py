@@ -398,7 +398,7 @@ def mp_FCmor_contmor(n1,alpha1,Req1,De1,red_mass,E,alpha2,Req2,De2,R_min,R_max,*
                                 * mp_psi_contmor(R,E,alpha2,Req2,red_mass,De2) * V_of_R(R) )
     tmp = mpmath.quad(func, [R_min, R_max], maxdegree=maxdeg, error=True)
     FC = tmp[0]
-    return complex(FC), complex(tmp[1])
+    return complex(FC)
 
 
 def mp_FChyp_contmor(V1a,V1b,R_start,red_mass,E,alpha2,Req2,De2,R_min,R_max,**kwargs):
@@ -408,7 +408,7 @@ def mp_FChyp_contmor(V1a,V1b,R_start,red_mass,E,alpha2,Req2,De2,R_min,R_max,**kw
                                 * mp_psi_contmor(R,E,alpha2,Req2,red_mass,De2) * V_of_R(R) )
     tmp = mpmath.quad(func, [R_min, R_max], maxdegree=maxdeg, error=True)
     FC = tmp[0]
-    return complex(FC), complex(tmp[1])
+    return complex(FC)
 
 #R_min = sc.angstrom_to_bohr(1.5)
 #R_max = sc.angstrom_to_bohr(30.0)

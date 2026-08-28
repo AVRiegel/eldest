@@ -87,17 +87,17 @@ def read_input(inputfile, outfile):
     gs_Req     = 0
     gs_const   = 47.6930
     # resonance-state parameters
-    res_a         = 0.0183747        # for morse: res_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)                                                    
-    res_b         = 15.3994          # for morse: res_a; for hyperbel or hypfree: V_b in au (Hartree)
-    res_c         = 6.0              # for morse: res_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (res_a/R_start) in au (Bohr)
-    res_d         = 0.0              # for morse: res_const; for hyperbel or hypfree: FC factor threshold for calculating the trs integral
-    res_pot_type  = 'morse'          # options: morse, hyperbel, hypfree
+    res_a         = 0.0183747        # for morse: res_de; for hyperbel: V_a in au (Hartree * Bohr)                                                    
+    res_b         = 15.3994          # for morse: res_a; for hyperbel: V_b in au (Hartree)
+    res_c         = 6.0              # for morse: res_Req; for hyperbel: step width for R_start for vibrational energies (res_a/R_start) in au (Bohr)
+    res_d         = 0.0              # for morse: res_const; for hyperbel: FC factor threshold for calculating the trs integral
+    res_pot_type  = 'morse'          # options: morse, hyperbel
     # final-state parameters
-    fin_a      = -15.869110       # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
-    fin_b      = 1.659155         # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)
-    fin_c      = 75.293906        # for morse: fin_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (fin_a/R_start) in au (Bohr)
-    fin_d      = 47.6930          # for morse: fin_const; for hyperbel or hypfree: FC factor threshold for calculating the trs integral
-    fin_pot_type  = 'morse'       # options: morse, hyperbel, hypfree
+    fin_a      = -15.869110       # for morse(_cont): fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
+    fin_b      = 1.659155         # for morse(_cont): fin_a; for hyperbel or hypfree: V_b in au (Hartree)
+    fin_c      = 75.293906        # for morse(_cont): fin_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (fin_a/R_start) in au (Bohr)
+    fin_d      = 47.6930          # for morse: fin_const; for morse_cont: step width for R_start for vibrational energies in au (Bohr); for hyperbel or hypfree: FC factor threshold for calculating the trs integral
+    fin_pot_type  = 'morse'       # options: morse, morse_cont (morse with continuum states), hyperbel, hypfree
 #-------------------------------------------------------------------------
 
     f = open(inputfile, 'r')
@@ -383,7 +383,7 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'res_pot_type'):
             res_pot_type = str(words[2])
             outfile.write('res_pot_type = ' + str(res_pot_type) + '\n')
-            if (res_pot_type not in ['morse','hyperbel', 'hypfree']):
+            if (res_pot_type not in ['morse','hyperbel']):
                 print('Non-existent resonance-state-potential type chosen, QUIT')
                 sys.exit()
         elif (words[0] == 'fin_a'):
@@ -401,7 +401,7 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'fin_pot_type'):
             fin_pot_type = str(words[2])
             outfile.write('fin_pot_type = ' + str(fin_pot_type) + '\n')
-            if (fin_pot_type not in ['morse','hyperbel', 'hypfree']):
+            if (fin_pot_type not in ['morse','morse_cont','hyperbel', 'hypfree']):
                 print('Non-existent final-state-potential type chosen, QUIT')
                 sys.exit()
     

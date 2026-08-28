@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-08-26 AVR                                            #
+# last change: 2026-08-27 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -359,7 +359,7 @@ print()
 print("Final state")
 print('-----------------------------------------------------------------')
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
-if (fin_pot_type == 'morse'):
+if (fin_pot_type in ('morse', 'morse_cont')):
     print("Energies of vibrational states of the final state")
     outfile.write("Energies of vibrational states of the final state" + '\n')
     fin_de    = fin_a
@@ -367,8 +367,12 @@ if (fin_pot_type == 'morse'):
     fin_Req   = fin_c
     fin_const = fin_d
     lambda_param_fin = np.sqrt(2*red_mass*fin_de) / fin_a
-    n_fin_max = int(lambda_param_fin - 0.5)     # Maximum quantum number = n_fin_max -> number of states = n_fin_max + 1
-    print("n_fin_max = ", n_fin_max)
+    if fin_pot_type == 'morse':
+        n_fin_max = int(lambda_param_fin - 0.5)     # Maximum quantum number = n_fin_max -> number of states = n_fin_max + 1
+        print("n_fin_max = ", n_fin_max)
+    else:
+        n_fin_bound_max = int(lambda_param_fin - 0.5)
+        print("n_fin_bound_max = ", n_fin_max, "  --- all higher states are continuum states")
     E_mus = []
     print('n_fin  ' + 'E [au]            ' + 'E [eV]')
     outfile.write('n_fin  ' + 'E [au]            ' + 'E [eV]' + '\n')
@@ -377,6 +381,41 @@ if (fin_pot_type == 'morse'):
         E_mus.append(ev)
         outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
         print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+    if (fin_pot_type == 'morse_cont'):
+        def morse_R2V(R, alpha, Req, De, V0=0):
+            return De * (1 - mp.exp(-alpha * (R-Req)))**2 + V0
+        def morse_V2R(V, alpha, Req, De, V0=0):
+            return Req - mp.log(1+mp.sqrt((V-V0)/De))/alpha
+        def morse_DOS(R, alpha, Req, De):
+            return 2*De*alpha * (1 - mp.exp(-alpha * (R-Req))) * mp.exp(-alpha * (R-Req))
+        factors_fin = [1] * (n_fin_bound_max+1)
+        R_start_EX_max_fin = morse_V2R(EX_max_au, fin_a, fin_Req, fin_de, E_fin_au)
+        R_start = R_start_EX_max_fin        # Initialize R_start at the lowest considered value (then increase R_start by a constant step fin_const)
+        while R_start < fin_Req:
+            E_mu = morse_R2V(R_start, fin_a, fin_Req, fin_de)
+            dos  = morse_DOS(R_start, fin_a, fin_Req, fin_de)
+            E_mus.insert(n_fin_bound_max+1,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
+            factors_fin.insert(n_fin_bound_max+1,dos)
+            R_start = R_start + fin_const
+        n_fin_max = len(E_mus) - 1
+        for n in range (n_fin_bound_max+1,n_fin_max+1):
+            outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,E_mus[n],sciconv.hartree_to_ev(E_mus[n])))
+            print('{:5d}  {:14.10E}  {:14.10E}'.format(n,E_mus[n],sciconv.hartree_to_ev(E_mus[n])))
+        outfile.write('Continuous vibrational states of the final state were discretized:\n')
+        outfile.write('Energy of highest possibly considered vibrational state\n of the final state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...\n'.format(
+            sciconv.hartree_to_ev(EX_max_au - E_fin_au),
+            sciconv.hartree_to_ev(morse_R2V(R_start_EX_max_fin, fin_a, fin_Req, fin_de) - morse_R2V(R_start_EX_max_fin + fin_const, fin_a, fin_Req, fin_de)),
+            sciconv.hartree_to_ev(morse_R2V(R_start_EX_max_fin + fin_const, fin_a, fin_Req, fin_de) - morse_R2V(R_start_EX_max_fin + 2 * fin_const, fin_a, fin_Req, fin_de)) ))
+        outfile.write('Each continuum E_mu was calculated as V_Morse(R_start),\n where R_start began at {0:.5f} au = {1:.5f} A\n and increased in constant steps of width {2:.5f} au = {3:.5f} A\n'.format(
+            R_start_EX_max_fin, sciconv.bohr_to_angstrom(R_start_EX_max_fin), fin_const, sciconv.bohr_to_angstrom(fin_const) ))
+        print('Continuous vibrational states of the final state were discretized:')
+        print('Energy of highest possibly considered vibrational state\n of the final state is {0:.5f} eV\nStep widths down from there decrease as (eV) {1:.5f}, {2:.5f} ...'.format(
+            sciconv.hartree_to_ev(EX_max_au - E_fin_au),
+            sciconv.hartree_to_ev(morse_R2V(R_start_EX_max_fin, fin_a, fin_Req, fin_de) - morse_R2V(R_start_EX_max_fin + fin_const, fin_a, fin_Req, fin_de)),
+            sciconv.hartree_to_ev(morse_R2V(R_start_EX_max_fin + fin_const, fin_a, fin_Req, fin_de) - morse_R2V(R_start_EX_max_fin + 2 * fin_const, fin_a, fin_Req, fin_de)) ))
+        print('Each continuum E_mu was calculated as V_Morse(R_start),\n where R_start began at {0:.5f} au = {1:.5f} A\n and increased in constant steps of width {2:.5f} au = {3:.5f} A'.format(
+            R_start_EX_max_fin, sciconv.bohr_to_angstrom(R_start_EX_max_fin), fin_const, sciconv.bohr_to_angstrom(fin_const) ))
+        
 elif (fin_pot_type in ('hyperbel','hypfree')):
     print('Final state is repulsive')
     outfile.write('Final state is repulsive' + '\n')
