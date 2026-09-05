@@ -719,9 +719,9 @@ outfile.write('\n' + '----------------------------------------------------------
 #-------------------------------------------------------------------------
 # determine total decay width matrix element
 print('Effective decay widths in eV and lifetimes in s:')
-print('n_res  W_l [eV]          tau_l [s]')
+print('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]')
 outfile.write('Effective decay widths in eV and lifetimes in s:' + '\n')
-outfile.write('n_res  W_l [eV]          tau_l [s]' + '\n')
+outfile.write('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]' + '\n')
 W_lambda = []   # [W_(l=0), W_(l=1), ...]
 for l in range (0,n_res_max+1):
     tmp = 0
@@ -736,9 +736,9 @@ for l in range (0,n_res_max+1):
         else:
             tmp = tmp + VEr_au_woVR**2 * np.abs(res_fin_woVR[l][m])**2 * factor
     W_lambda.append(tmp)
-    ttmp = 1./ (2 * np.pi * tmp)        # lifetime tau_l = 1 / (2 pi W_l)
-    print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}')
-    outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}\n')
+    ttmp = 1./ (2*np.pi*tmp)        # lifetime tau_l = 1 / (2 pi W_l)
+    print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+    outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}\n')
 print()
 outfile.write('\n')
 
@@ -793,9 +793,9 @@ elif (Xshape == 'infinite'):
 # technical definitions of functions (remember: FX is the field strength EX)
 #direct ionization
 fun_t_dir_1 = lambda t1: FX_t1(t1)   * np.exp(1j * E_fin_au * (t1-t_au)) \
-                                     * np.exp(1j * E_kin_au * (t1-t_au))        # Note: before any of these fncts are called, E_fin is redefined to also include E_mu
+                                     * np.exp(1j * (E_kin_au + E_p_au) * (t1-t_au))        # Note: before any of these fncts are called, E_fin is redefined to also include E_mu
 fun_TX2_dir_1 = lambda t1: FX_t1(t1) * np.exp(1j * E_fin_au * (t1-t_au)) \
-                                     * np.exp(1j * E_kin_au * (t1-t_au))        # Same as fun_t_dir_1 - why keep ?
+                                     * np.exp(1j * (E_kin_au + E_p_au) * (t1-t_au))        # Same as fun_t_dir_1 - why keep ?
 
 #res_inner_fun = lambda t2: np.exp(-t2 * (np.pi * W_au + 1j*(Er_au))) \
 #                           * IR_during(t2)
