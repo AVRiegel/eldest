@@ -2,18 +2,20 @@
 prc           = ICD              # options: ICD/RICD
 # transitions dipole moments
 rdg_au        = 0.70             # transition dipole moment into the resonance state
+rdg_au_2      = 0.70             # transition dipole moment into the second resonance state (if existent)
 cdg_au        = 0.5              # transition dipole moment into any continuum state
 q             = 1
 # parameters of the investigated system
 # the ground state (vibrational gs of electronic gs) energy is being defined as EG = 0
+N_res		  =   1				 # number of electronic resonance states (1 or 2)
 Er_a_eV       =  49.7477         # resonance energy (at potential minimum) in eV
-Er_b_eV       =   0.0
+Er_b_eV       =   0.0			 # second resonance energy (at potential minimum) in eV (if existent)
 E_fin_eV      =  39.9004         # final state energy (at potential minimum) in eV
 tau_s         =  20E-15          # lifetime in s
+tau_s_2       =   0.0			 # lifetime for second resonance state in s (if existent)
 E_fin_eV_2    =   0.0 
 tau_a_s       =   0.0
 tau_b_s       =   0.0
-tau_s_2       =   0.0
 interact_eV   =   0.0
 #
 # laser parameters
@@ -58,7 +60,7 @@ mass1         = 20.1797          # in g/mol
 mass2         = 20.1797          # in g/mol
 grad_delta    = 0.001
 R_eq_AA       = 3.08
-# vibrational states parameters  # provide everything in au (de in Hartree, a in inverse Bohr, Req in Bohr)
+# vibrational-states parameters  # provide everything in au (de in Hartree, a in inverse Bohr, Req in Bohr)
 # ground-state parameters
 gs_de         = 0.0001102
 gs_a          = 1.5
@@ -69,6 +71,11 @@ res_de        = 0.0183747
 res_a         = 15.3994
 res_Req       = 6.0
 res_const     = 0.0
+# second-resonance-state parameters (if existent)
+res_de_2      = 0.0183747
+res_a_2       = 15.3994
+res_Req_2     = 6.0
+res_const_2   = 0.0
 # final-state parameters
 fin_a         = 0.0833354        # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
 fin_b         = 1.4699729        # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)

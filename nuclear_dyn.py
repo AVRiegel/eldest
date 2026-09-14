@@ -99,19 +99,17 @@ Xshape = 'convoluted'
 # ( * X_sinsq, X_gauss are simply Booleans, created by in_out from X_shape)
 # ( * phi is the phase for the IR pulse potential cosine-oscillation, a remnant from PRA 2020)
 # ( * integ, integ_outer are integration schemes: [analytic,] quadrature, romberg)
-# (currently NOT in use: cdg_au, tau_a_s, tau_b_s interact_eV, Lshape, shift_step_s, phi, grad_delta, R_eq_AA, gs_const, res_const)
-# ( * Er_b_eV and E_fin_eV_2 will be converted to au, but these will not be used afterwards)
-# ( * tau_s_2 will be converted to au at this to Gamma, but this will not be used afterwards)
+# (currently NOT in use: cdg_au, tau_a_s, tau_b_s, interact_eV, Lshape, shift_step_s, phi, grad_delta, R_eq_AA, gs_const, res_const, res_const_2)
+# ( * E_fin_eV_2 will be converted to au, but this will not be used afterwards)
 # ( * omega_eV will be converted to au, from which TL and A0L are calculated, but other than being used for needless printing and for check_input, they will not be used afterwards)
 # ( * n_L and I_L only lead to related qnts like TL, E0L and A0L, for which above holds)
 # ( * FWHM_L will be converted to au and this printed, but not be used afterwards)
-# ( * fin_d will be used to bind fin_const for Morse final potential, but both will not be used afterwards)
 
 # (q is explicit input, not calced as q = rdg / (cdg pi VEr) = sqrt(2 tau / pi) rdg / cdg )
 
 (X_ICD, X_RICD,
- rdg_au, cdg_au,
- Er_a_eV, Er_b_eV, tau_a_s, tau_b_s, E_fin_eV, tau_s, E_fin_eV_2, tau_s_2,
+ rdg_au, rdg_au_2, cdg_au,
+ N_res, Er_a_eV, Er_b_eV, tau_a_s, tau_b_s, E_fin_eV, tau_s, E_fin_eV_2, tau_s_2,
  interact_eV,
  Omega_eV, n_X, I_X, X_sinsq, X_gauss, Xshape,
  omega_eV, n_L, I_L, Lshape, delta_t_s, shift_step_s, phi, q, FWHM_L,
@@ -123,6 +121,7 @@ Xshape = 'convoluted'
  mass1, mass2, grad_delta, R_eq_AA,
  gs_de, gs_a, gs_Req, gs_const,
  res_de, res_a, res_Req, res_const,
+ res_de_2, res_a_2, res_Req_2, res_const_2,
  fin_a, fin_b, fin_c, fin_d, fin_pot_type
  ) = in_out.read_input(infile, outfile)
 
@@ -167,23 +166,26 @@ if args.gamma:
 #-------------------------------------------------------------------------
 # Convert input parameters to atomic units
 #-------------------------------------------------------------------------
-Er_a_au        = sciconv.ev_to_hartree(Er_a_eV)     # resonance E for RICD + AI
-#Er_b_au        = sciconv.ev_to_hartree(Er_b_eV)     # resonance E for ICD
+Er_a_au        = sciconv.ev_to_hartree(Er_a_eV)     # resonance E
+if N_res == 2:
+    Er_b_au        = sciconv.ev_to_hartree(Er_b_eV) # second resonance E
 Er_au          = Er_a_au        # ? One could delete Er_a_au altogether
 E_fin_au       = sciconv.ev_to_hartree(E_fin_eV)    # (same as for Er)
 E_fin_au_1     = sciconv.ev_to_hartree(E_fin_eV)    # final E for sRICD
 
-tau_au_1       = sciconv.second_to_atu(tau_s)       # lifetime for sRICD res. st.
+tau_au_1       = sciconv.second_to_atu(tau_s)       # lifetime for resonance state
 tau_au         = tau_au_1                           # (same as for Er)
 Gamma_au       = 1. / tau_au
 Gamma_eV       = sciconv.hartree_to_ev(Gamma_au)
 if Gamma_type == 'const':
     outfile.write('Gamma_eV = ' + str(Gamma_eV) + '\n')
+if N_res == 2:                                      # second resonance state
+    tau_au_2       = sciconv.second_to_atu(tau_s_2)
+    Gamma_au_2     = 1. / tau_au_2
+    Gamma_eV_2       = sciconv.hartree_to_ev(Gamma_au_2)
+    if Gamma_type == 'const':
+        outfile.write('Gamma_eV_2 = ' + str(Gamma_eV_2) + '\n')
 
-# second final state
-#E_fin_au_2       = sciconv.ev_to_hartree(E_fin_eV_2)
-#tau_au_2         = sciconv.second_to_atu(tau_s_2)
-#Gamma_au_2       = 1. / tau_au_2
 
 # laser parameters
 Omega_au      = sciconv.ev_to_hartree(Omega_eV)
@@ -253,27 +255,47 @@ else:   # This should not happen thanks to default settings
     sys.exit('!!! Process was not specified correctly. Programme terminated.')
 
 VEr_au        = np.sqrt(Gamma_au/ (2*np.pi))
+if N_res == 2:
+    VEr_au_2        = np.sqrt(Gamma_au_2/ (2*np.pi))
 #VEr_au_1      = VEr_au      # (same as for Er)
 
-cdg_au_V = rdg_au / ( q * np.pi * VEr_au)
+cdg_au_V = rdg_au / ( q * np.pi * VEr_au)   # Ignore rdg_au_2 and VEr_au_2 for cdg calculation
 
 if Gamma_type == 'const':
     print('VEr_au = ', VEr_au)
     outfile.write('VEr_au = ' + str(VEr_au) + '\n')
+    if N_res == 2:
+        print('VEr_au_2 = ', VEr_au_2)
+        outfile.write('VEr_au_2 = ' + str(VEr_au_2) + '\n')
 elif Gamma_type == 'R6':
     if partial_GamR:
         VEr_au_woVR = VEr_au
         print('VEr_au = ', VEr_au)
         outfile.write('VEr_au = ' + str(VEr_au) + '\n')
+        if N_res == 2:
+            VEr_au_woVR_2 = VEr_au_2
+            print('VEr_au_2 = ', VEr_au_2)
+            outfile.write('VEr_au_2 = ' + str(VEr_au_2) + '\n')
     VEr_au = VEr_au*gs_Req**3                            # adjusts VEr_au by the R dependent factor
     print('VEr_au_adjusted = ', VEr_au)
     outfile.write('VEr_au_adjusted = ' + str(VEr_au) + '\n')
+    if N_res == 2:
+        VEr_au_2 = VEr_au_2*gs_Req**3                    # adjusts VEr_au_2 by the R dependent factor
+        print('VEr_au_2_adjusted = ', VEr_au_2)
+        outfile.write('VEr_au_adjusted_2 = ' + str(VEr_au_2) + '\n')
 elif Gamma_type == 'external':
     if partial_GamR:
         VEr_au_woVR = VEr_au
         print('VEr_au = ', VEr_au)
         outfile.write('VEr_au = ' + str(VEr_au) + '\n')
     VEr_au = 1          # all info about V carried in the 'Franck-Condon' integrals, so ignore VEr_au
+    if N_res == 2:
+        if partial_GamR:
+            VEr_au_woVR_2 = VEr_au_2
+            print('VEr_au_2 = ', VEr_au_2)
+            outfile.write('VEr_au_2 = ' + str(VEr_au_2) + '\n')
+        VEr_au_2 = 1          # all info about V carried in the 'Franck-Condon' integrals, so ignore VEr_au_2
+
 
 
 #-------------------------------------------------------------------------
@@ -283,7 +305,11 @@ print()
 print('-----------------------------------------------------------------')
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
 red_mass = wf.red_mass_au(mass1,mass2)
-print("red_mass [au] = ", red_mass)
+print("red_mass [au] =", red_mass)
+outfile.write("red_mass [au] = " + red_mass + '\n')
+if N_res == 2:      # KEEP THAT LINE! in_out will search for 'N_res = '
+    print("Number of electronic resonance states: N_res = 2")
+    outfile.write("Number of electronic resonance states: N_res = 2" + "\n")
 
 #ground state
 print()
@@ -322,6 +348,26 @@ for n in range (0,n_res_max+1):
     E_lambdas.append(ev)
     outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
     print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
+
+#second resonance state
+if N_res == 2:
+    print()
+    print("Second resonance state")
+    print('-----------------------------------------------------------------')
+    print("Energies of vibrational states of the second resonance state")
+    outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
+    outfile.write("Energies of vibrational states of the second resonance state" + '\n')
+    lambda_param_res_2 = np.sqrt(2*red_mass*res_de_2) / res_a_2
+    n_res_max_2 = int(lambda_param_res_2 - 0.5)
+    print("n_res_max_2 = ", n_res_max_2)
+    E_lambdas_2 = []
+    outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
+    print('n_res  ' + 'E [au]            ' + 'E [eV]')
+    for n in range (0,n_res_max_2+1):
+        ev = wf.eigenvalue(n,res_de_2,res_a_2,red_mass)
+        E_lambdas_2.append(ev)
+        outfile.write('{:5d}  {:14.10E}  {:14.10E}\n'.format(n,ev,sciconv.hartree_to_ev(ev)))
+        print('{:5d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
 
 #final state
 print()
@@ -375,9 +421,12 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
 #-------------------------------------------------------------------------
 # Franck-Condon factors
 #-------------------------------------------------------------------------
-gs_res =  []    # collects sub-lists of FC overlaps: [<l0|k0>, <l1|k0>, ...], [<l0|k1, <l1|k1>, ...], ...
-gs_fin =  []
+gs_res  = []    # collects sub-lists of FC overlaps: [<l0|k0>, <l1|k0>, ...], [<l0|k1, <l1|k1>, ...], ...
+gs_fin  = []
 res_fin = []
+if N_res == 2:
+    gs_res_2  = []
+    res_fin_2 = []
 R_min = sciconv.angstrom_to_bohr(1.5)+0.01
 R_max = sciconv.angstrom_to_bohr(30.0)
 
@@ -385,6 +434,9 @@ for k in range(0,n_gs_max+1):   # prepare the above (empty) sub-lists
     gs_fin.append(list())
 for l in range(0,n_res_max+1):
     res_fin.append(list())
+if N_res == 2:
+    for l in range(0,n_res_max_2+1):
+        res_fin_2.append(list())
 
 if not fc_precalc and args.fc:
     close_files()
@@ -431,6 +483,10 @@ if partial_GamR:
     res_fin_woVR = []
     for l in range(0,n_res_max+1):
         res_fin_woVR.append(list())
+    if N_res == 2:
+        res_fin_woVR_2 = []
+        for l in range(0,n_res_max_2+1):
+            res_fin_woVR_2.append(list())
 
 
 
@@ -478,17 +534,40 @@ if not args.fc:                 # If, however, an FC input file is provided, FC 
                                  k,gs_a,gs_Req,gs_de,R_min,R_max)
             tmp.append(FC)
         gs_res.append(tmp)
+        if N_res == 2:
+            tmp = []
+            for l in range (0,n_res_max_2+1):
+                FC = wf.mp_FCmor_mor(l,res_a_2,res_Req_2,res_de_2,red_mass,
+                                    k,gs_a,gs_Req,gs_de,R_min,R_max)
+                tmp.append(FC)
+            gs_res_2.append(tmp)            
+
     
 # read in FCs;      or calc ground state - final state <mu|kappa>   and   resonance state - final state <mu|lambda>
 if (fin_pot_type == 'morse'):
     if args.fc:            # If an FC input file is provided, read in the FC integrals from it and skip their calculation
-        gs_res, gs_fin, res_fin, _, _ = in_out.read_fc_input(args.fc)
+        if N_res == 1:
+            gs_res, _, gs_fin, res_fin, _, _, _, _ = in_out.read_fc_input(args.fc)
+        else:
+            gs_res, gs_res_2, gs_fin, res_fin, res_fin_2, _, _, _ = in_out.read_fc_input(args.fc)
         if partial_GamR:
-            gs_res_woVR, gs_fin_woVR, res_fin_woVR, _, _ = in_out.read_fc_input(args.FC)
-            if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and len(res_fin) == len(res_fin_woVR)):
-                outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                close_files()
-                sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+            if N_res == 1:
+                gs_res_woVR, _, gs_fin_woVR, res_fin_woVR, _, _, _, _ = in_out.read_fc_input(args.FC)
+                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and len(res_fin) == len(res_fin_woVR)):
+                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
+                    close_files()
+                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+            else:
+                gs_res_woVR, gs_res_woVR_2, gs_fin_woVR, res_fin_woVR, res_fin_woVR_2, _, _, _ = in_out.read_fc_input(args.FC)
+                if not (gs_res_woVR == gs_res and gs_res_woVR_2 == gs_res_2
+                        and gs_fin_woVR == gs_fin
+                        and len(res_fin) == len(res_fin_woVR) and len(res_fin_2) == len(res_fin_woVR_2)):
+                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_res_2: " + str(gs_res_woVR_2 == gs_res_2)
+                                  + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
+                                  + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + ", len(res_fin_2): " + str(len(res_fin_2) == len(res_fin_woVR_2)) + "\n")
+                    close_files()
+                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+
     else:
         for m in range(0,n_fin_max+1):
             for k in range(0,n_gs_max+1):
@@ -505,11 +584,25 @@ if (fin_pot_type == 'morse'):
                                          l,res_a,res_Req,res_de,R_min,R_max,
                                          V_of_R=lambda R: 1)
                     res_fin_woVR[l].append(FC)
+            if N_res == 2:
+                for l in range(0,n_res_max_2+1):
+                    FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
+                                        l,res_a_2,res_Req_2,res_de_2,R_min,R_max,
+                                        V_of_R=V_of_R)      # Gamma(R) dependence only influences res-fin FC integrals (interaction mediated by V)
+                    res_fin_2[l].append(FC)
+                    if partial_GamR:
+                        FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
+                                            l,res_a_2,res_Req_2,res_de_2,R_min,R_max,
+                                            V_of_R=lambda R: 1)
+                        res_fin_woVR_2[l].append(FC)
 
 
 elif (fin_pot_type in ('hyperbel','hypfree')):
     if args.fc:            # If an FC input file is provided, read in the FC integrals from it and skip their calculation
-        gs_res, gs_fin, res_fin, n_fin_max_list, n_fin_max_X = in_out.read_fc_input(args.fc)
+        if N_res == 1:
+            gs_res, _, gs_fin, res_fin, _, n_fin_max_list, _, n_fin_max_X = in_out.read_fc_input(args.fc)
+        else:
+            gs_res, gs_res_2, gs_fin, res_fin, res_fin_2, n_fin_max_list, n_fin_max_list_2, n_fin_max_X = in_out.read_fc_input(args.fc)
         R_start = R_start_EX_max        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
         for m in range(0,n_fin_max_X+1):
             E_mu = fin_hyp_a / R_start
@@ -517,19 +610,34 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
             R_start = R_start + R_hyp_step
         norm_factor = 1.
         if partial_GamR:
-            gs_res_woVR, gs_fin_woVR, res_fin_woVR, n_fin_max_list_woVR, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
-            if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_fin_max_list_woVR == n_fin_max_list
-                    and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
-                outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
-                              + ", max_X: " + str(n_fin_max_X_woVR == n_fin_max_X) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
-                close_files()
-                sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+            if N_res == 1:
+                gs_res_woVR, _, gs_fin_woVR, res_fin_woVR, _, n_fin_max_list_woVR, _, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
+                if not (gs_res_woVR == gs_res and gs_fin_woVR == gs_fin and n_fin_max_list_woVR == n_fin_max_list
+                        and n_fin_max_X_woVR == n_fin_max_X and len(res_fin) == len(res_fin_woVR)):
+                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_fin: " + str(gs_fin_woVR == gs_fin) + ", max_list: " + str(n_fin_max_list_woVR == n_fin_max_list)
+                                + ", max_X: " + str(n_fin_max_X_woVR == n_fin_max_X) + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + "\n")
+                    close_files()
+                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+            else:
+                gs_res_woVR, gs_res_woVR_2, gs_fin_woVR, res_fin_woVR, res_fin_woVR_2, n_fin_max_list_woVR, n_fin_max_list_woVR_2, n_fin_max_X_woVR = in_out.read_fc_input(args.FC)
+                if not (gs_res_woVR == gs_res and gs_res_woVR_2 == gs_res_2 and gs_fin_woVR == gs_fin
+                        and n_fin_max_list_woVR == n_fin_max_list and n_fin_max_list_woVR_2 == n_fin_max_list_2
+                        and n_fin_max_X_woVR == n_fin_max_X
+                        and len(res_fin) == len(res_fin_woVR) and len(res_fin_2) == len(res_fin_woVR_2)):
+                    outfile.write("gs_res: " + str(gs_res_woVR == gs_res) + ", gs_res_2: " + str(gs_res_woVR_2 == gs_res_2)
+                                  + ", gs_fin: " + str(gs_fin_woVR == gs_fin)
+                                  + ", max_list: " + str(n_fin_max_list_woVR == n_fin_max_list) + ", max_list_2: " + str(n_fin_max_list_woVR_2 == n_fin_max_list_2)
+                                  + ", max_X: " + str(n_fin_max_X_woVR == n_fin_max_X)
+                                  + ", len(res_fin): " + str(len(res_fin) == len(res_fin_woVR)) + ", len(res_fin_2): " + str(len(res_fin_2) == len(res_fin_woVR_2)) + "\n")
+                    close_files()
+                    sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
+
 
     else:
         FCfunc = wf.mp_FCmor_hyp if (fin_pot_type == 'hyperbel') else wf.mp_FCmor_freehyp
-        Req_max = max(gs_Req, res_Req)
+        Req_max = max(gs_Req, res_Req) if N_res == 1 else max(gs_Req, res_Req, res_Req_2)
         R_start = R_start_EX_max        # Initialize R_start at the lowest considered value (then increase R_start by a constant R_hyp_step)
-        thresh_flag = -1                # Initialize flag for FC-calc stop. Counts how often in a (mu) row all FC fall below threshold
+        thresh_flag = 0                 # Initialize flag for FC-calc stop. Counts how often in a (mu) row all FC fall below threshold
         while (thresh_flag < 3):        # Stop FC calc if all |FC| < threshold for 3 consecutive mu
             E_mu = fin_hyp_a / R_start
             E_mus.insert(0,E_mu)        # Present loop starts at high energies, but these shall get high mu numbers = stand at the end of the lists -> fill lists from right to left
@@ -555,11 +663,27 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
                     res_fin_woVR[l].insert(0,FC)
                     print(f'l = {l}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}')   #?
     #               outfile.write(f'l = {l}, res_fin_woVR = {FC: 10.10E}, |res_fin_woVR| = {np.abs(FC):10.10E}\n')   #?
+            if N_res == 2:
+                for l in range(0,n_res_max_2+1):
+                    FC = FCfunc(l,res_a_2,res_Req_2,res_de_2,red_mass,
+                                fin_hyp_a,fin_hyp_b,R_start,R_min,R_max,
+                                V_of_R=V_of_R)
+                    res_fin_2[l].insert(0,FC)
+                    print(f'l = {l}, res_fin_2 = {FC: 10.10E}, |res_fin_2| = {np.abs(FC):10.10E}')   #?
+        #            outfile.write(f'l = {l}, res_fin_2 = {FC: 10.10E}, |res_fin_2| = {np.abs(FC):10.10E}\n')   #?
+                    if partial_GamR:
+                        FC = FCfunc(l,res_a_2,res_Req_2,res_de_2,red_mass,
+                                    fin_hyp_a,fin_hyp_b,R_start,R_min,R_max,
+                                    V_of_R=lambda R: 1)
+                        res_fin_woVR_2[l].insert(0,FC)
+                        print(f'l = {l}, res_fin_woVR_2 = {FC: 10.10E}, |res_fin_woVR_2| = {np.abs(FC):10.10E}')   #?
+        #               outfile.write(f'l = {l}, res_fin_woVR_2 = {FC: 10.10E}, |res_fin_woVR_2| = {np.abs(FC):10.10E}\n')   #?
+            
             if (R_start > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req
                 if (all(np.abs( gs_fin[k][0]) < threshold for k in range(0, n_gs_max+1)) and
-                    all(np.abs(res_fin[l][0]) < threshold for l in range(0,n_res_max+1)) ): # To keep consistency, the res_fin_woVR are not included in this check
-                    if (thresh_flag != -1):     # -1 can only occur at lowest R_start values (once any FC > threshold: flag is set to 0, then stays >= 0) -> dont stop calc right at start just bc FC are small there
-                        thresh_flag = thresh_flag + 1
+                    all(np.abs(res_fin[l][0]) < threshold for l in range(0,n_res_max+1)) and
+                    all(np.abs(res_fin_2[l][0]) < threshold for l in range(0,n_res_max_2+1)) if N_res == 2 else True ): # To keep consistency, the res_fin_woVR are not included in this check
+                    thresh_flag = thresh_flag + 1
                 else:
                     thresh_flag = 0         # If any FC overlap > threshold, reset flag -> only (mu-)consecutive threshold check passes shall stop calc
             print(f'thresh_flag = {thresh_flag}')                                                                               #?
@@ -592,16 +716,24 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
                 if (E_fin_au + E_mus[n_fin] <= Er_au + E_l):    # The highest (i.e. first, since loop starts at high n_fin) n_fin for which (E_fin + E_mu <= E_res + E_l) is n_fin_max for this l
                     n_fin_max_list.append(n_fin)
                     break
+        if N_res == 2:
+            n_fin_max_list_2 = []
+            for E_l in E_lambdas_2:
+                for n_fin in range(len(E_mus)-1, -1, -1):           # Loop over E_mus from back to start
+                    if (E_fin_au + E_mus[n_fin] <= Er_b_au + E_l):    # The highest (i.e. first, since loop starts at high n_fin) n_fin for which (E_fin + E_mu <= E_res + E_l) is n_fin_max for this l
+                        n_fin_max_list_2.append(n_fin)
+                        break
         n_fin_max_X = len(E_mus) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
 
 # print FC integrals
 #   gs-res
+# KEEP THESE LINES! in_out will search for "Franck-Condon overlaps between ground and resonance state" and skip the following line
 print()
 print('-----------------------------------------------------------------')
 print("Franck-Condon overlaps between ground and resonance state")
 print('n_gs  ' + 'n_res  ' + '<res|gs>')
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
-outfile.write("Franck-Condon overlaps between ground and resonance state" + '\n')
+outfile.write("Franck-Condon overlaps between ground and resonance state" + '\n')   # Change only together with in_out.read_fc_input !
 outfile.write('n_gs  ' + 'n_res  ' + '<res|gs>' + '\n')
 
 for k in range (0,n_gs_max+1):
@@ -609,6 +741,22 @@ for k in range (0,n_gs_max+1):
         FC = gs_res[k][l]
         outfile.write('{:4d}  {:5d}  {:14.10E}\n'.format(k,l,FC))
         print(('{:4d}  {:5d}  {:14.10E}'.format(k,l,FC)))
+
+#   gs-res-2
+if N_res == 2:
+    print()
+    print('-----------------------------------------------------------------')
+    print("Franck-Condon overlaps between ground and second resonance state")
+    print('n_gs  ' + 'n_res  ' + '<res|gs>')
+    outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
+    outfile.write("Franck-Condon overlaps between ground and second resonance state" + '\n')
+    outfile.write('n_gs  ' + 'n_res  ' + '<res|gs>' + '\n')
+
+    for k in range (0,n_gs_max+1):
+        for l in range (0,n_res_max_2+1):
+            FC = gs_res_2[k][l]
+            outfile.write('{:4d}  {:5d}  {:14.10E}\n'.format(k,l,FC))
+            print(('{:4d}  {:5d}  {:14.10E}'.format(k,l,FC)))
 
 #   gs-fin
 print()
@@ -661,9 +809,36 @@ for l in range(0,n_res_max+1):
             elif (m == 1):
                 print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
                 print('   ...')
+
+#   res-fin-2
+if N_res == 2:
+    print()
+    print('-----------------------------------------------------------------')
+    print("Franck-Condon overlaps between final and second resonance state")
+    print('n_res  ' +'n_fin  ' + '<fin|res>')
+    outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
+    outfile.write("Franck-Condon overlaps between final and second resonance state" + '\n')
+    outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
+
+    for l in range(0,n_res_max_2+1):
+        if (fin_pot_type in ('hyperbel','hypfree')):
+            n_fin_max = n_fin_max_list_2[l]
+        for m in range(0,n_fin_max+1):
+            FC = res_fin_2[l][m]
+            outfile.write('{:5d}  {:5d}  {: 14.10E}\n'.format(l,m,FC))
+            if (fin_pot_type == 'morse'):
+                print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+            elif (fin_pot_type in ('hyperbel','hypfree')):
+                if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                elif (m == 1):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    print('   ...')
+
+
 if (fin_pot_type in ('hyperbel','hypfree')):
-    print("All overlaps between ground or resonance state and final state\n outside the indicated quantum numbers are considered zero")
-    outfile.write("All overlaps between ground or resonance state and final state\n outside the indicated quantum numbers are considered zero\n")
+    print("All overlaps between ground or resonance", ("state" if N_res == 1 else "states"), "and final state\n outside the indicated quantum numbers are considered zero")
+    outfile.write("All overlaps between ground or resonance " + ("state " if N_res == 1 else "states ") + "and final state\n outside the indicated quantum numbers are considered zero\n")
 
 if partial_GamR:
     print()
@@ -688,6 +863,31 @@ if partial_GamR:
                 elif (m == 1):
                     print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
                     print('   ...')
+
+    if N_res == 2:
+        print()
+        print('-----------------------------------------------------------------')
+        print("Franck-Condon overlaps between final & second res state - no V(R)")
+        outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
+        outfile.write("Franck-Condon overlaps between final & second res state - no V(R)" + '\n')
+        print('n_res  ' +'n_fin  ' + '<fin|res>')
+        outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
+        
+        for l in range(0,n_res_max_2+1):
+            if (fin_pot_type in ('hyperbel','hypfree')):
+                n_fin_max = n_fin_max_list_2[l]
+            for m in range(0,n_fin_max+1):
+                FC = res_fin_woVR_2[l][m]
+                outfile.write('{:5d}  {:5d}  {: 14.10E}\n'.format(l,m,FC))
+                if (fin_pot_type == 'morse'):
+                    print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                elif (fin_pot_type in ('hyperbel','hypfree')):
+                    if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                    elif (m == 1):
+                        print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
+                        print('   ...')
+
     print('These additional overlaps without the V(R) dependence are used\n only in',
             'the prefactors to the time integrals' if (partial_GamR == 'exp') else 'the calculation of the W_lambda values')
     outfile.write('These additional overlaps without the V(R) dependence are used\n only in '
@@ -713,6 +913,24 @@ for l in range (0,n_res_max+1):
 print()
 print('-----------------------------------------------------------------')
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
+
+if N_res == 2:
+    indir_FCsums_2 = []
+    for l in range (0,n_res_max_2+1):
+        indir_FCsum = 0
+        factor = 1
+        if (fin_pot_type in ('hyperbel','hypfree')):
+            n_fin_max = n_fin_max_list_2[l]
+        for m in range (0, n_fin_max + 1):
+            if (fin_pot_type in ('hyperbel','hypfree')):            # R-DOS for 'integration' over R_mu instead of [E_]mu
+                factor = R_hyp_step * E_mus[m]**2 / fin_hyp_a
+            if not partial_GamR == 'exp':
+                tmp = np.conj(res_fin_2[l][m]) * gs_fin[0][m] * factor    # <mu|lambda>* <mu|kappa=0> = <lambda|mu><mu|kappa=0> = <l|m><m|k=0>
+            else:   # If Gamma(R) only in exponent (i.e. Wl), then indir_FCsums is woVR since it is part of prefactor
+                tmp = np.conj(res_fin_woVR_2[l][m]) * gs_fin[0][m] * factor
+            indir_FCsum = indir_FCsum + tmp                         # sum_m <l|m><m|k=0>
+        indir_FCsums_2.append(indir_FCsum)                            # [sum_m <l=0|m><m|k=0>, sum_m <l=1|m><m|k=0>, ...]
+
 
 #-------------------------------------------------------------------------
 # determine total decay width matrix element
@@ -740,6 +958,30 @@ for l in range (0,n_res_max+1):
 print()
 outfile.write('\n')
 
+if N_res == 2:
+    print('For the second electronic resonance state:')
+    print('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]')
+    outfile.write('For the second electronic resonance state:' + '\n')
+    outfile.write('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]' + '\n')
+    W_lambda_2 = []   # [W_(l=0), W_(l=1), ...]
+    for l in range (0,n_res_max_2+1):
+        tmp = 0
+        factor = 1
+        if (fin_pot_type in ('hyperbel','hypfree')):
+            n_fin_max = n_fin_max_list_2[l]       # To each lambda their own n_fin_max (v.s.)
+        for m in range (0, n_fin_max + 1):
+            if (fin_pot_type in ('hyperbel','hypfree')):
+                factor = R_hyp_step * np.array(E_mus[m])**2 / fin_hyp_a
+            if not partial_GamR == 'pre':
+                tmp = tmp + VEr_au_2**2 * np.abs(res_fin_2[l][m])**2 * factor      # W_l = sum_m ( VEr**2 |<m|l>|**2 ) for Morse or W_l = sum_m ( DeltaR R-DOS(m) VEr**2 |<m|l>|**2 ) for cont vibr fin states
+            else:
+                tmp = tmp + VEr_au_woVR_2**2 * np.abs(res_fin_woVR_2[l][m])**2 * factor
+        W_lambda_2.append(tmp)
+        ttmp = 1./ (2*np.pi*tmp)        # lifetime tau_l = 1 / (2 pi W_l)
+        print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+        outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}\n')
+    print()
+    outfile.write('\n')
 
 #-------------------------------------------------------------------------
 in_out.check_input(Er_au, E_fin_au, Gamma_au,
@@ -869,11 +1111,18 @@ while (E_p_au <= Ep_max_au):
 # constants / prefactors
 prefac_dir1 = 1j * cdg_au_V
 if not partial_GamR == 'exp':
-    prefac_res1 = VEr_au * rdg_au / (n_res_max + 1)
-    prefac_indir1 = -1j * np.pi * VEr_au**2 * cdg_au_V / (n_res_max + 1)
+    prefac_res1 = VEr_au * rdg_au / ( N_res * (n_res_max + 1) )
+    prefac_indir1 = -1j * np.pi * VEr_au**2 * cdg_au_V / ( N_res * (n_res_max + 1) )
+    if N_res == 2:
+        prefac_res2 = VEr_au_2 * rdg_au_2 / ( N_res * (n_res_max_2 + 1) )
+        prefac_indir2 = -1j * np.pi * VEr_au_2**2 * cdg_au_V / ( N_res * (n_res_max_2 + 1) )
 else:
-    prefac_res1 = VEr_au_woVR * rdg_au / (n_res_max + 1)
-    prefac_indir1 = -1j * np.pi * VEr_au_woVR**2 * cdg_au_V / (n_res_max + 1)
+    prefac_res1 = VEr_au_woVR * rdg_au / ( N_res * (n_res_max + 1) )
+    prefac_indir1 = -1j * np.pi * VEr_au_woVR**2 * cdg_au_V / ( N_res * (n_res_max + 1) )
+    if N_res == 2:
+        prefac_res2 = VEr_au_woVR_2 * rdg_au_2 / ( N_res * (n_res_max_2 + 1) )
+        prefac_indir2 = -1j * np.pi * VEr_au_woVR_2**2 * cdg_au_V / ( N_res * (n_res_max_2 + 1) )        
+
 
 if (fin_pot_type in ('hyperbel','hypfree')):
     n_fin_max = n_fin_max_X

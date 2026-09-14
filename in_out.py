@@ -23,18 +23,20 @@ def read_input(inputfile, outfile):
     #
     # transitions dipole moments
     rdg_au       = 0.3            # transition dipole moment into the resonance state
+    rdg_au_2     = 0.3            # transition dipole moment into the second resonance state
     cdg_au       = 0.9            # transition dipole moment into any continuum state
     q            = 1
     # parameters of the investigated system
     # the ground state (vibrational gs of electronic gs) energy is being defined as EG = 0
-    Er_a_eV       =  150.0        # resonance energy (at potential minimum) in eV 
-    Er_b_eV       =    0.0
+    N_res		  =   1				 # number of electronic resonance states (1 or 2)
+    Er_a_eV       =  49.7477         # resonance energy (at potential minimum) in eV
+    Er_b_eV       =   0.0			 # second resonance energy (at potential minimum) in eV
+    E_fin_eV      =  39.9004         # final state energy (at potential minimum) in eV
+    tau_s         =  20E-15          # lifetime in s
+    tau_s_2       =   0.0			 # lifetime for second resonance state in s
     tau_a_s       =  0.0
     tau_b_s       =  0.0
-    E_fin_eV      =  70.0         # final state energy (at potential minimum) in eV
-    tau_s         =  4.0E-16      # lifetime in s
     E_fin_eV_2    =  0.0
-    tau_s_2       =  4.0E-16
     interact_eV   =  0.0
     #
     # laser parameters
@@ -91,6 +93,11 @@ def read_input(inputfile, outfile):
     res_a      = 1.930064
     res_Req    = 37.757254
     res_const  = 47.6930
+    # second-resonance-state parameters
+    res_de_2      = 0.0183747
+    res_a_2       = 15.3994
+    res_Req_2     = 6.0
+    res_const_2   = 0.0
     # final-state parameters
     fin_a      = -15.869110       # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
     fin_b      = 1.659155         # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)
@@ -125,12 +132,20 @@ def read_input(inputfile, outfile):
             rdg_au = float(words[2])
             print('rdg_au = ', rdg_au)
             outfile.write('rdg_au = ' + str(rdg_au) + '\n')
+        elif (words[0] == 'rdg_au_2'):
+            rdg_au_2 = float(words[2])
+            print('rdg_au_2 = ', rdg_au_2)
+            outfile.write('rdg_au_2 = ' + str(rdg_au_2) + '\n')
         elif (words[0] == 'cdg_au'):
             cdg_au = float(words[2])
             print('cdg_au = ', cdg_au)
             outfile.write('cdg_au = ' + str(cdg_au) + '\n')
     
     # energy parameters of the system
+        elif (words[0] == 'N_res'):
+            Er_a_eV = int(words[2])
+            print('N_res = ', N_res)
+            outfile.write('N_res = ' + str(N_res) + '\n')
         elif (words[0] == 'Er_a_eV'):
             Er_a_eV = float(words[2])
             print('Er_a_eV = ', Er_a_eV)
@@ -353,6 +368,7 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'wavepac_only'):
             wavepac_only = True if words[2].lower() == 'true' else False
 
+    # vibrational-states parameters
         elif (words[0] == 'gs_de'):
             outfile.write('Parameters of potential energy curves:' + '\n')
             gs_de = float(words[2])
@@ -378,6 +394,18 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'res_const'):
             res_const = float(words[2])
             outfile.write('res_const = ' + str(res_const) + '\n')
+        elif (words[0] == 'res_de_2'):
+            res_de_2 = float(words[2])
+            outfile.write('res_de_2 = ' + str(res_de_2) + '\n')
+        elif (words[0] == 'res_a_2'):
+            res_a_2 = float(words[2])
+            outfile.write('res_a_2 = ' + str(res_a_2) + '\n')
+        elif (words[0] == 'res_Req_2'):
+            res_Req_2 = float(words[2])
+            outfile.write('res_Req_2 = ' + str(res_Req_2) + '\n')
+        elif (words[0] == 'res_const_2'):
+            res_const_2 = float(words[2])
+            outfile.write('res_const_2 = ' + str(res_const_2) + '\n')
         elif (words[0] == 'fin_a'):
             fin_a = float(words[2])
             outfile.write('fin_a = ' + str(fin_a) + '\n')
@@ -399,8 +427,8 @@ def read_input(inputfile, outfile):
     
     f.close()
     return (X_ICD, X_RICD,
-            rdg_au, cdg_au,
-            Er_a_eV, Er_b_eV, tau_a_s, tau_b_s, E_fin_eV, tau_s, E_fin_eV_2, tau_s_2,
+            rdg_au, rdg_au_2, cdg_au,
+            N_res, Er_a_eV, Er_b_eV, tau_a_s, tau_b_s, E_fin_eV, tau_s, E_fin_eV_2, tau_s_2,
             interact_eV,
             Omega_eV, n_X, I_X, X_sinsq, X_gauss, Xshape,
             omega_eV, n_L, I_L, Lshape, delta_t_s, shift_step_s, phi, q, FWHM_L,
@@ -412,6 +440,7 @@ def read_input(inputfile, outfile):
             mass1, mass2, grad_delta, R_eq_AA,
             gs_de, gs_a, gs_Req, gs_const,
             res_de, res_a, res_Req, res_const,
+            res_de_2, res_a_2, res_Req_2, res_const_2,
             fin_a, fin_b, fin_c, fin_d, fin_pot_type
             )
 
@@ -731,6 +760,18 @@ def read_fc_input(inputfile):
     with open(inputfile, 'r') as f:
         lines = f.readlines()
 
+    N_res = 1   # Number of electronic resonance states
+    for line in lines:
+        if 'N_res = ' in line:
+            N_res = int(line.split('N_res = ')[-1][0])
+            break
+    if N_res == 2:
+        gs_res_2 = [[]]
+        res_fin_2 = [[]]
+    elif N_res > 2:
+        sys.exit('More than two electronic resonance states are currently not supported.')
+
+
     lines_iter = iter(lines)
     for line in lines_iter:
         if state == 'pre_gs-res':
@@ -746,27 +787,44 @@ def read_fc_input(inputfile):
             continue
 
         if unicode(words[0]).isnumeric():
-            if state == 'pre_gs-fin':
+            if state == 'pre_gs-res-2':
+                state = 'gs-res-2'
+            elif state == 'pre_gs-fin':
                 state = 'gs-fin'
             elif state == 'pre_res-fin':
                 state = 'res-fin'
+            elif state == 'pre_res-fin-2':
+                state = 'res-fin-2'
         else:
             if state == 'gs-res':
+                state = 'pre_gs-fin' if N_res == 1 else 'pre_gs-res-2'
+                prev_n = 0
+            elif state == 'gs-res-2':
                 state = 'pre_gs-fin'
                 prev_n = 0
             elif state == 'gs-fin':
                 state = 'pre_res-fin'
                 prev_n = 0
             elif state == 'res-fin':
+                if N_res == 1:
+                    break
+                else:
+                    state = 'pre_res-fin-2'
+                    prev_n = 0
+            elif state == 'res-fin-2':
                 break
             continue
 
         if state == 'gs-res':
             fcs = gs_res
+        elif state == 'gs-res-2':
+            fcs = gs_res_2
         elif state == 'gs-fin':
             fcs = gs_fin
         elif state == 'res-fin':
             fcs = res_fin
+        elif state == 'res-fin-2':
+            fcs = res_fin_2
         else:
             sys.exit('The FC integral read-in situation has developed not necessarily to our advantage.')
 
@@ -778,9 +836,17 @@ def read_fc_input(inputfile):
     n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
     for l in res_fin:
         n_fin_max_list.append(len(l) - 1)
+    if N_res == 2:
+        n_fin_max_list_2 = []
+        for l in res_fin_2:
+            n_fin_max_list_2.append(len(l) - 1)        
     n_fin_max_X = len(gs_fin[0]) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
 
-    return (gs_res, gs_fin, res_fin, n_fin_max_list, n_fin_max_X)
+    return (gs_res, gs_res_2 if N_res == 2 else [],
+            gs_fin,
+            res_fin, res_fin_2 if N_res == 2 else [],
+            n_fin_max_list, n_fin_max_list_2 if N_res == 2 else [],
+            n_fin_max_X)
 
 
 
