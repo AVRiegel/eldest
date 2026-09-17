@@ -123,7 +123,8 @@ def read_input(inputfile, outfile):
                     print(kw + '_' + str(res) + ' = ', val)
                 outfile.write(kw + '_' + str(res) + ' = ' + str(val) + '\n')
                 break
-    
+
+    # The first thing we get: N_res
     for line in lines:
         words = line.split()
         if (words[0] == 'N_res'):
@@ -132,7 +133,13 @@ def read_input(inputfile, outfile):
                 res_lists[key] = [res_lists[key][0] for _ in range(N_res)]
             print('N_res = ', N_res)
             outfile.write('N_res = ' + str(N_res) + '\n')
-        elif (words[0] == 'prc'):
+            break
+
+
+    for line in lines:
+        words = line.split()
+    # type of process
+        if (words[0] == 'prc'):
             if (words[2] == 'ICD'):
                 X_ICD = True
                 X_RICD = False
@@ -163,7 +170,7 @@ def read_input(inputfile, outfile):
     # energy parameters of the system
         elif (words[0] in {'Er_eV','Er_a_eV'}):
             Er_eV = float(words[2])
-            res_lists['Er_eV_list'][0] = Er_eV
+            res_lists['Er_eV'][0] = Er_eV
             print('Er_eV = ', Er_eV)
             outfile.write('Er_eV = ' + str(Er_eV) + '\n')
         elif (words[0].startswith('Er_eV_')):
@@ -441,7 +448,7 @@ def read_input(inputfile, outfile):
             fin_pot_type = str(words[2])
             outfile.write('fin_pot_type = ' + str(fin_pot_type) + '\n')
             if (fin_pot_type not in ['morse','hyperbel', 'hypfree']):
-                print('Non-existent final state potential type chosen, QUIT')
+                print('Non-existent final-state-potential type chosen, QUIT')
                 sys.exit()
     
     f.close()
@@ -458,7 +465,7 @@ def read_input(inputfile, outfile):
             fc_precalc, partial_GamR, part_fc_pre, wavepac_only,
             mass1, mass2, grad_delta, R_eq_AA,
             gs_de, gs_a, gs_Req, gs_const,
-            res_lists['res_de'], res_lists['res_a'], res_lists['res_Re'], res_lists['res_const'],
+            res_lists['res_de'], res_lists['res_a'], res_lists['res_Req'], res_lists['res_const'],
             fin_a, fin_b, fin_c, fin_d, fin_pot_type
             )
 
@@ -800,9 +807,7 @@ def read_fc_input(inputfile):
             if line.startswith("Franck-Condon overlaps between ground and resonance state"):
                 state = 'gs-res'
                 next(lines_iter)    # Skip line after magic phrase (header of table)
-                continue
-            else:
-                continue
+            continue
 
         words = line.split()
         if len(words) == 0:
@@ -819,8 +824,9 @@ def read_fc_input(inputfile):
                 if res == N_res - 1:    # We have read all gs-res for all res states
                     state = 'pre_gs-fin'
                     res = 0
-                else:   # That is, if res < N_res - 1
+                elif line.startswith("Franck-Condon overlaps between ground and resonance state"):
                     res = res + 1
+                    next(lines_iter)    # Skip line after magic phrase (header of table)
                 prev_n = -1
             elif state == 'gs-fin':
                 state = 'pre_res-fin'
@@ -828,9 +834,10 @@ def read_fc_input(inputfile):
             elif state == 'res-fin':
                 if res == N_res - 1:
                     break
-                else:
+                elif line.startswith("Franck-Condon overlaps between final"):
                     res = res + 1
                     prev_n = -1
+                    next(lines_iter)    # Skip line after magic phrase (header of table)
             continue
 
         if state == 'gs-res':
@@ -849,7 +856,7 @@ def read_fc_input(inputfile):
 
     n_fin_max_list = [[] for _ in range(N_res)] # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
     for res in range(N_res):
-        for l in res_fin:
+        for l in res_fin[res]:
             n_fin_max_list[res].append(len(l) - 1)      
     n_fin_max_X = len(gs_fin[0]) - 1            # Will be used in hyperbel/hypfree case as the very highest nmu
 

@@ -17,6 +17,7 @@
 import argparse
 from datetime import datetime
 import dill
+from functools import partial
 import mpmath as mp
 import numpy as np
 from os import devnull
@@ -130,7 +131,7 @@ Xshape = 'convoluted'
 pure_out = open('full.dat' if not wavepac_only else devnull, mode='w')
 movie_out = open('movie.dat' if not wavepac_only else devnull, mode='w')
 #popfile = open("pop.dat", mode='w')
-wp_res_out = [open('wp_res.dat' if N_res == 1 else f'wp_res_{res}.dat', mode='w') for res in range(N_res)]
+wp_res_out = [open('wp_res.dat' if N_res == 1 else f'wp_res_{res+1}.dat', mode='w') for res in range(N_res)]
 
 def close_files():
     outfile.close()
@@ -293,7 +294,7 @@ print('-----------------------------------------------------------------')
 outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
 red_mass = wf.red_mass_au(mass1,mass2)
 print("red_mass [au] =", red_mass)
-outfile.write("red_mass [au] = " + red_mass + '\n')
+outfile.write("red_mass [au] = " + str(red_mass) + '\n')
 if N_res > 1:
     print("Number of electronic resonance states: N_res = ", N_res)
     outfile.write("Number of electronic resonance states: N_res = " + str(N_res) + "\n") # KEEP THAT LINE! in_out will search for 'N_res = '
@@ -319,7 +320,7 @@ for n in range (0,n_gs_max+1):
     print('{:4d}  {:14.10E}  {:14.10E}'.format(n,ev,sciconv.hartree_to_ev(ev)))
 
 #resonance state
-lambda_param_res_list = np.sqrt(2*red_mass*res_de_list) / res_a_list
+lambda_param_res_list = np.sqrt(2*red_mass*np.array(res_de_list)) / res_a_list
 n_res_max_list = (lambda_param_res_list - 0.5).astype(int)
 E_lambdas_list = []    # set up [E_{res,lambda}]
 for res in range(0,N_res):
@@ -333,7 +334,7 @@ for res in range(0,N_res):
     outfile.write("Resonance state" if N_res == 1 else f"Resonance state no. {res+1}")
     outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
     outfile.write("Energies of vibrational states of the resonance state" + '\n')
-    outfile.write("n_res_max = ", str(n_res_max_list[res]))
+    outfile.write("n_res_max = " + str(n_res_max_list[res]) + '\n')
     outfile.write('n_res  ' + 'E [au]            ' + 'E [eV]' + '\n')
     E_lambdas_list.append(
         np.frompyfunc(wf.eigenvalue,4,1)(
@@ -513,18 +514,18 @@ if (fin_pot_type == 'morse'):
 
         for res in range(N_res):
             res_fin.append(
-                np.frompyfunc(wf.mp_FCmor_mor,12,1)(
-                    range(0,range(0,n_fin_max+1)),fin_a,fin_Req,fin_de,red_mass,
+                np.frompyfunc(partial(wf.mp_FCmor_mor,V_of_R=V_of_R),11,1)(
+                    range(0,n_fin_max+1),fin_a,fin_Req,fin_de,red_mass,
                     np.arange(0,n_res_max_list[res]+1)[:,None],res_a_list[res],res_Req_list[res],res_de_list[res],
-                    R_min, R_max, V_of_R=V_of_R
+                    R_min, R_max
                 ).astype(float)
             )      # Gamma(R) dependence only influences res-fin FC integrals (interaction mediated by V)
             if partial_GamR:
                 res_fin_woVR.append(
-                    np.frompyfunc(wf.mp_FCmor_mor,12,1)(
-                        range(0,range(0,n_fin_max+1)),fin_a,fin_Req,fin_de,red_mass,
+                    np.frompyfunc(partial(wf.mp_FCmor_mor,V_of_R=lambda R: 1),11,1)(
+                        range(0,n_fin_max+1),fin_a,fin_Req,fin_de,red_mass,
                         np.arange(0,n_res_max_list[res]+1)[:,None],res_a_list[res],res_Req_list[res],res_de_list[res],
-                        R_min, R_max, V_of_R=lambda R: 1
+                        R_min, R_max
                     ).astype(float)
                 )
 
@@ -575,23 +576,23 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
             
             # res-fin
             for res in range(0,N_res):
-                FC = np.frompyfunc(FCfunc,11,1)(
+                FC = np.frompyfunc(partial(FCfunc,V_of_R=V_of_R),10,1)(
                     range(0,n_res_max_list[res]+1),res_a_list[res],res_Req_list[res],res_de_list[res],red_mass,
-                    fin_hyp_a,fin_hyp_b,R_start,R_min,R_max, V_of_R=V_of_R
+                    fin_hyp_a,fin_hyp_b,R_start,R_min,R_max
                 )
                 for l in range(0,n_res_max_list[res]+1):
                     res_fin[res][l].insert(0,FC[l])
-                    print(f'res_state = {res}, l = {l}, res_fin = {FC[l]: 10.10E}, |res_fin| = {np.abs(FC[l]):10.10E}')   #?
-        #            outfile.write(f'res_state = {res}, l = {l}, res_fin = {FC[l]: 10.10E}, |res_fin| = {np.abs(FC[l]):10.10E}\n')   #?
+                    print(f'res_state = {res+1}, l = {l}, res_fin = {FC[l]: 10.10E}, |res_fin| = {np.abs(FC[l]):10.10E}')   #?
+        #            outfile.write(f'res_state = {res+1}, l = {l}, res_fin = {FC[l]: 10.10E}, |res_fin| = {np.abs(FC[l]):10.10E}\n')   #?
                 if partial_GamR:
-                    FC = np.frompyfunc(FCfunc,11,1)(
+                    FC = np.frompyfunc(partial(FCfunc,V_of_R=lambda R: 1),10,1)(
                         range(0,n_res_max_list[res]+1),res_a_list[res],res_Req_list[res],res_de_list[res],red_mass,
-                        fin_hyp_a,fin_hyp_b,R_start,R_min,R_max, V_of_R=lambda R: 1
+                        fin_hyp_a,fin_hyp_b,R_start,R_min,R_max
                     )
                     for l in range(0,n_res_max_list[res]+1):
                         res_fin_woVR[res][l].insert(0,FC[l])
-                        print(f'res_state = {res}, l = {l}, res_fin_woVR = {FC[l]: 10.10E}, |res_fin_woVR| = {np.abs(FC[l]):10.10E}')   #?
-        #               outfile.write(f'res_state = {res}, l = {l}, res_fin_woVR = {FC[l]: 10.10E}, |res_fin_woVR| = {np.abs(FC[l]):10.10E}\n')   #?
+                        print(f'res_state = {res+1}, l = {l}, res_fin_woVR = {FC[l]: 10.10E}, |res_fin_woVR| = {np.abs(FC[l]):10.10E}')   #?
+        #               outfile.write(f'res_state = {res+1}, l = {l}, res_fin_woVR = {FC[l]: 10.10E}, |res_fin_woVR| = {np.abs(FC[l]):10.10E}\n')   #?
             
             # Convergence check
             if (R_start > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req
@@ -622,12 +623,12 @@ for res in range(N_res):
     print()
     print('-----------------------------------------------------------------')
     print("Franck-Condon overlaps between ground and resonance state" +
-          (f' no. {res}' if N_res > 1 else '')
+          (f' no. {res+1}' if N_res > 1 else '')
     )
     print('n_gs  ' + 'n_res  ' + '<res|gs>')
     outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
     outfile.write("Franck-Condon overlaps between ground and resonance state" +
-                  (f' no. {res}' if N_res > 1 else '') +
+                  (f' no. {res+1}' if N_res > 1 else '') +
                   '\n')   # Change first line only together with in_out.read_fc_input !
     outfile.write('n_gs  ' + 'n_res  ' + '<res|gs>' + '\n')
 
@@ -653,7 +654,7 @@ for k in range(0,n_gs_max+1):
     for m in range(0,n_fin_max+1):
         FC = gs_fin[k][m]
         outfile.write('{:4d}  {:5d}  {: 14.10E}\n'.format(k,m,FC))
-        if (fin_pot_type == 'morse'):
+        if (fin_pot_type == 'morse' or n_fin_max <= 3):
             print(('{:4d}  {:5d}  {: 14.10E}'.format(k,m,FC)))
         elif (fin_pot_type in ('hyperbel','hypfree')):
             if (m == 0 or m == n_fin_max-1 or m == n_fin_max):      # Don't print all the FC, just the first two and last two (per GS vibr state)
@@ -668,13 +669,13 @@ for res in range(N_res):
     print()
     print('-----------------------------------------------------------------')
     print("Franck-Condon overlaps between final and resonance state" +
-          (f' no. {res}' if N_res > 1 else '')
+          (f' no. {res+1}' if N_res > 1 else '')
     )
     print('n_res  ' +'n_fin  ' + '<fin|res>')
     outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
     outfile.write("Franck-Condon overlaps between final and resonance state" +
-                  (f' no. {res}' if N_res > 1 else '') +
-                  '\n')
+                  (f' no. {res+1}' if N_res > 1 else '') +
+                  '\n')     # Change first line only together with in_out.read_fc_input !
     outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
 
     for l in range(0,n_res_max_list[res]+1):
@@ -683,7 +684,7 @@ for res in range(N_res):
         for m in range(0,n_fin_max+1):
             FC = res_fin[res][l][m]
             outfile.write('{:5d}  {:5d}  {: 14.10E}\n'.format(l,m,FC))
-            if (fin_pot_type == 'morse'):
+            if (fin_pot_type == 'morse' or n_fin_max <= 3):
                 print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
             elif (fin_pot_type in ('hyperbel','hypfree')):
                 if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
@@ -701,12 +702,12 @@ if partial_GamR:
         print()
         print('-----------------------------------------------------------------')
         print("Franck-Condon overlaps between final & res state" +
-            (f' no. {res}' if N_res > 1 else '') +
+            (f' no. {res+1}' if N_res > 1 else '') +
             " - no V(R)")
         print('n_res  ' +'n_fin  ' + '<fin|res>')
         outfile.write('\n' + '-----------------------------------------------------------------' + '\n')
         outfile.write("Franck-Condon overlaps between final & res state" +
-                    (f' no. {res}' if N_res > 1 else '') +
+                    (f' no. {res+1}' if N_res > 1 else '') +
                     " - no V(R)" + '\n')
         outfile.write('n_res  ' +'n_fin  ' + '<fin|res>' + '\n')
         
@@ -716,7 +717,7 @@ if partial_GamR:
             for m in range(0,n_fin_max+1):
                 FC = res_fin_woVR[res][l][m]
                 outfile.write('{:5d}  {:5d}  {: 14.10E}\n'.format(l,m,FC))
-                if (fin_pot_type == 'morse'):
+                if (fin_pot_type == 'morse' or n_fin_max <= 3):
                     print(('{:5d}  {:5d}  {: 14.10E}'.format(l,m,FC)))
                 elif (fin_pot_type in ('hyperbel','hypfree')):
                     if (m == 0 or m == n_fin_max-1 or m == n_fin_max):
@@ -763,10 +764,10 @@ outfile.write('Effective decay widths in eV and lifetimes in s:' + '\n')
 W_lambda_list = [[] for _ in range(N_res)]   # [[W_(res=0,l=0), W_(res=0,l=1), ...], [W_(res=1,l=0), ...], ...]
 for res in range(N_res):
     if N_res > 1:
-        print(f'For the electronic resonance state no. {res}:')
-        outfile.write(f'For the electronic resonance state no. {res}:\n')
-    print('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]')
-    outfile.write('n_res  W_l [eV]          tau_l [s]          Gamma_l[eV]' + '\n')
+        print(f'For the electronic resonance state no. {res+1}:')
+        outfile.write(f'For the electronic resonance state no. {res+1}:\n')
+    print('n_res  W_l [eV]          tau_l [s]         Gamma_l[eV]')
+    outfile.write('n_res  W_l [eV]          tau_l [s]         Gamma_l[eV]' + '\n')
     for l in range (0,n_res_max_list[res]+1):
         tmp = 0
         factor = 1
@@ -781,8 +782,8 @@ for res in range(N_res):
                 tmp = tmp + VEr_au_woVR_list[res]**2 * np.abs(res_fin_woVR[res][l][m])**2 * factor
         W_lambda_list[res].append(tmp)
         ttmp = 1./ (2*np.pi*tmp)        # lifetime tau_l = 1 / (2 pi W_l)
-        print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
-        outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E} {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}\n')
+        print(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}  {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}')
+        outfile.write(f'{l:5d}  {sciconv.hartree_to_ev(tmp):14.10E}  {sciconv.atu_to_second(ttmp):14.10E}  {sciconv.hartree_to_ev(2*np.pi*tmp):14.10E}\n')
     print()
     outfile.write('\n')
 
@@ -830,66 +831,6 @@ if (Xshape == 'convoluted'):    # Calculate field strength EX = -(AX fX)'
 elif (Xshape == 'infinite'):
     FX_t1 = lambda t1: + A0X * Omega_au * np.cos(Omega_au * t1)
     #FX_t1 = lambda t1: - A0X * np.sin(Omega_au * t1)
-                       
-
-#-------------------------------------------------------------------------
-# technical definitions of functions (remember: FX is the field strength EX)
-#direct ionization
-fun_t_dir_1 = lambda t1: FX_t1(t1)   * np.exp(1j * E_fin_au * (t1-t_au)) \
-                                     * np.exp(1j * (E_kin_au + E_p_au) * (t1-t_au))        # Note: before any of these fncts are called, E_fin is redefined to also include E_mu
-fun_TX2_dir_1 = lambda t1: FX_t1(t1) * np.exp(1j * E_fin_au * (t1-t_au)) \
-                                     * np.exp(1j * (E_kin_au + E_p_au) * (t1-t_au))        # Same as fun_t_dir_1 - why keep ?
-
-#res_inner_fun = lambda t2: np.exp(-t2 * (np.pi * W_au + 1j*(Er_au))) \
-#                           * IR_during(t2)
-
-# if (integ == 'romberg'):                                                        # numerical inner int not possible (res_inner_fun deactivated) ?
-#     res_inner = lambda t1: integrate.romberg(res_inner_fun, t1, t_au)
-# elif (integ == 'quadrature'):
-#     res_inner = lambda t1: integrate.quad(res_inner_fun, t1, t_au)[0]
-if (integ != 'analytic'):
-    print('WARNING: Numerical inner integration not available, switching to analytical inner integration!')
-    outfile.write('WARNING: Numerical inner integration not available, switching to analytical inner integration!' + '\n')
-# analytic inner integral
-res_inner = lambda t1: (1./(1j*(E_kin_au + E_fin_au - Er_au - E_lambda)     # See the above note on E_fin also including E_mu
-                                - np.pi * W_au)
-                        * (np.exp(t_au * (1j*(E_kin_au + E_fin_au
-                                                - Er_au - E_lambda)
-                                                - np.pi * W_au))
-                            - np.exp(t1 * (1j*(E_kin_au + E_fin_au
-                                                - Er_au - E_lambda)
-                                                - np.pi * W_au)))
-                        * np.exp(-1j*t_au * (E_kin_au + E_fin_au + E_p_au))
-                        )
-
-res_outer_fun = lambda t1: FX_t1(t1) \
-                           * np.exp(t1 * (np.pi* W_au + 1j*(Er_au + E_lambda + E_p_au))) \
-                           * res_inner(t1)
-
-
-# for wavepacket in resonance state
-def t_plus(t):
-    return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au))
-def t_minus(t):
-    return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au))
-
-def gamma_plus(T_up):
-    return ((Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au) * (mp.erf(t_plus(T_up)) \
-                                               - mp.erf(t_plus(-TX_au/2))) \
-            + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_plus(T_up)**2) \
-                                              - mp.exp(-t_plus(-TX_au/2)**2)))
-def gamma_minus(T_up):
-    return ((Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au) * (mp.erf(t_minus(T_up)) \
-                                               - mp.erf(t_minus(-TX_au/2))) \
-            + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_minus(T_up)**2) \
-                                              - mp.exp(-t_minus(-TX_au/2)**2)))
-
-def wp_res_int(t,T_up):
-    return (A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au)) \
-            * (mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au)**2) \
-                * gamma_plus(T_up) \
-               + mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au)**2) \
-                * gamma_minus(T_up)))
 
 
 #-------------------------------------------------------------------------
@@ -942,6 +883,63 @@ for res in range(N_res):
 # 'after the pulse' (TX/2, tmax)
 
 def propagate(t_upper):
+
+    #-------------------------------------------------------------------------
+    # technical definitions of functions (remember: FX is the field strength EX)
+    #direct ionization
+    fun_t_dir_1 = lambda t1: FX_t1(t1)   * np.exp(1j * E_fin_au * (t1-t_au)) \
+                                        * np.exp(1j * (E_kin_au + E_p_au) * (t1-t_au))        # Note: before any of these fncts are called, E_fin is redefined to also include E_mu
+
+    # if (integ == 'romberg'):                                                        # numerical inner int not possible (res_inner_fun deactivated) ?
+    #     res_inner = lambda t1: integrate.romberg(res_inner_fun, t1, t_au)
+    # elif (integ == 'quadrature'):
+    #     res_inner = lambda t1: integrate.quad(res_inner_fun, t1, t_au)[0]
+    if (integ != 'analytic'):
+        print('WARNING: Numerical inner integration not available, switching to analytical inner integration!')
+        outfile.write('WARNING: Numerical inner integration not available, switching to analytical inner integration!' + '\n')
+    # analytic inner integral
+    res_inner = lambda t1: (1./(1j*(E_kin_au + E_fin_au - Er_au - E_lambda)     # See the above note on E_fin also including E_mu
+                                    - np.pi * W_au)
+                            * (np.exp(t_au * (1j*(E_kin_au + E_fin_au
+                                                    - Er_au - E_lambda)
+                                                    - np.pi * W_au))
+                                - np.exp(t1 * (1j*(E_kin_au + E_fin_au
+                                                    - Er_au - E_lambda)
+                                                    - np.pi * W_au)))
+                            * np.exp(-1j*t_au * (E_kin_au + E_fin_au + E_p_au))
+                            )
+
+    res_outer_fun = lambda t1: FX_t1(t1) \
+                            * np.exp(t1 * (np.pi* W_au + 1j*(Er_au + E_lambda + E_p_au))) \
+                            * res_inner(t1)
+
+
+    # for wavepacket in resonance state
+    def t_plus(t):
+        return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au))
+    def t_minus(t):
+        return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au))
+
+    def gamma_plus(T_up):
+        return ((Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au) * (mp.erf(t_plus(T_up)) \
+                                                - mp.erf(t_plus(-TX_au/2))) \
+                + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_plus(T_up)**2) \
+                                                - mp.exp(-t_plus(-TX_au/2)**2)))
+    def gamma_minus(T_up):
+        return ((Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au) * (mp.erf(t_minus(T_up)) \
+                                                - mp.erf(t_minus(-TX_au/2))) \
+                + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_minus(T_up)**2) \
+                                                - mp.exp(-t_minus(-TX_au/2)**2)))
+
+    def wp_res_int(t,T_up):
+        return (A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au)) \
+                * (mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au)**2) \
+                    * gamma_plus(T_up) \
+                + mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au)**2) \
+                    * gamma_minus(T_up)))
+    #-------------------------------------------------------------------------
+
+
     outlines = []       # will contain lines containing E_kin, E_p, time and signal intensity
     squares = np.array([])  # signal intensity ( = |amplitude|**2 = |J|**2 )
     E_kin_au = E_min_au
@@ -1078,7 +1076,7 @@ def propagate(t_upper):
         in_out.doout_1f(wp_res_out[res], wp_ampls)
 
 
-    t_au = t_au + timestep_au
+    
 
 #-------------------------------------------------------------------------
 while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
@@ -1086,6 +1084,7 @@ while ((t_au <= TX_au/2) and (t_au <= tmax_au)):
     outfile.write('during the pulse \n')
     print('during the pulse')
     propagate(t_upper=t_au)
+    t_au = t_au + timestep_au
 
 #-------------------------------------------------------------------------
 while (t_au >= TX_au/2\
@@ -1096,6 +1095,7 @@ while (t_au >= TX_au/2\
     print('after the pulse')
     # all equal to during-pulse section, except for integrating over entire XUV pulse now
     propagate(t_upper=TX_au/2)
+    t_au = t_au + timestep_au
 
 
 

@@ -1,18 +1,23 @@
+# Additional electronic resonance states can be added by including additional lines with X_2, X_3 etc. for
+# rdg_au, Er_eV, tau_s, res_a, res_de, res_Req, res_const
+# Example: rdg_au_2 = 0.90
+# Keep the lines for the first electronic resonance state as they are (do not add '_1').
+# Indicate the number of electronic resonance states with N_res.
 # process
 prc           = ICD              # options: ICD/RICD
 # transitions dipole moments
 rdg_au        = 0.70             # transition dipole moment into the resonance state
-rdg_au_2      = 0.70             # transition dipole moment into the second resonance state (if existent)
+#rdg_au_2      = 0.90		 # transition dipole moment into the second resonance state (if existent)
 cdg_au        = 0.5              # transition dipole moment into any continuum state
 q             = 1
 # parameters of the investigated system
 # the ground state (vibrational gs of electronic gs) energy is being defined as EG = 0
-N_res		  =   1				 # number of electronic resonance states (1 or 2)
-Er_a_eV       =  49.7477         # resonance energy (at potential minimum) in eV
-Er_b_eV       =   0.0			 # second resonance energy (at potential minimum) in eV (if existent)
+N_res	      =   1		 # number of electronic resonance states
+Er_eV         =  49.7477         # resonance energy (at potential minimum) in eV
+#Er_eV_2       =  51.0000	 # second resonance energy (at potential minimum) in eV (if existent)
 E_fin_eV      =  39.9004         # final state energy (at potential minimum) in eV
 tau_s         =  20E-15          # lifetime in s
-tau_s_2       =   0.0			 # lifetime for second resonance state in s (if existent)
+#tau_s_2       =  40E-15 	 # lifetime for second resonance state in s (if existent)
 E_fin_eV_2    =   0.0 
 tau_a_s       =   0.0
 tau_b_s       =   0.0
@@ -71,20 +76,20 @@ res_de        = 0.0183747
 res_a         = 15.3994
 res_Req       = 6.0
 res_const     = 0.0
-# second-resonance-state parameters (if existent)
-res_de_2      = 0.0183747
-res_a_2       = 15.3994
-res_Req_2     = 6.0
-res_const_2   = 0.0
-# final-state parameters
-fin_a         = 0.0833354        # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
-fin_b         = 1.4699729        # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)
-fin_c         = 0.01890          # for morse: fin_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (fin_a/R_start) in au (Bohr)
-fin_d         = 1.E-05           # for morse: fin_const; for hyperbel or hypfree: FC factor threshold for calculating the trs integral
-fin_pot_type  = hyperbel         # options: morse, hyperbel, hypfree
+## second-resonance-state parameters (if existent)
+#res_de_2      = 0.0200000
+#res_a_2       = 16.0000
+#res_Req_2     = 6.0
+#res_const_2   = 0.0
 ## final-state parameters
-#fin_a         = 0.003675
-#fin_b         = 21.7512
-#fin_c         = 6.0
-#fin_d         = 0.0
-#fin_pot_type  = morse
+#fin_a         = 0.0833354        # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
+#fin_b         = 1.4699729        # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)
+#fin_c         = 0.01890          # for morse: fin_Req; for hyperbel or hypfree: step width for R_start for vibrational energies (fin_a/R_start) in au (Bohr)
+#fin_d         = 1.E-05           # for morse: fin_const; for hyperbel or hypfree: FC factor threshold for calculating the trs integral
+#fin_pot_type  = hyperbel         # options: morse, hyperbel, hypfree
+# final-state parameters
+fin_a         = 0.003675
+fin_b         = 21.7512
+fin_c         = 6.0
+fin_d         = 0.0
+fin_pot_type  = morse
