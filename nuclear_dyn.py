@@ -479,6 +479,7 @@ if not args.fc:                 # If, however, an FC input file is provided, FC 
             FC = wf.mp_FCmor_mor(l,res_a,res_Req,res_de,red_mass,
                                  k,gs_a,gs_Req,gs_de,R_min,R_max)
             tmp.append(FC)
+            print(f'k = {k}, l = {l}, FC = {FC}')
         gs_res.append(tmp)
     
 # read in FCs;      or calc ground state - final state <mu|kappa>   and   resonance state - final state <mu|lambda>
@@ -502,6 +503,7 @@ if (fin_pot_type == 'morse'):
                                      l,res_a,res_Req,res_de,R_min,R_max,
                                      V_of_R=V_of_R)      # Gamma(R) dependence only influences res-fin FC integrals (interaction mediated by V)
                 res_fin[l].append(FC)
+                print(f'k = {k}, l = {l}, FC = {FC}')
                 if partial_GamR:
                     FC = wf.mp_FCmor_mor(m,fin_a,fin_Req,fin_de,red_mass,
                                          l,res_a,res_Req,res_de,R_min,R_max,
