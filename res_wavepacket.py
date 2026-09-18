@@ -14,7 +14,6 @@ from pygnuplot import gnuplot   # Module is py-gnuplot
 from scipy.integrate import romb, simpson, trapezoid
 import subprocess
 import sys
-sys.path.append('/mnt/home/alexander/eldest')
 import warnings
 warnings.filterwarnings(action='ignore', category=np.exceptions.ComplexWarning)
 
