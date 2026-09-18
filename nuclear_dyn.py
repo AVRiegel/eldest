@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-06-08 AVR                                            #
+# last change: 2026-09-18 AVR                                            #
 ##########################################################################
 
 import argparse
