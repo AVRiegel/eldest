@@ -86,6 +86,8 @@ print(str(dt_start))
 outfile.write(str(dt_start) + '\n')
 outfile.write('Tempora mutantur, nos et mutamur in illis.\n')
 outfile.write("The results were obtained with nuclear_dyn.py\n")
+outfile.write("WARNING: ONLY RESONANCE PATHWAY IS ACTIVE, OTHERS ARE SUPPRESSED!\n")
+print("WARNING: ONLY RESONANCE PATHWAY IS ACTIVE, OTHERS ARE SUPPRESSED!")
 
 infile = args.infile
 print(infile)
@@ -565,7 +567,7 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
     #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_mu = {E_mu:5.5f} au = {sciconv.hartree_to_ev(E_mu):5.5f} eV, steps: {int((R_start - R_start_EX_max) / R_hyp_step  + 0.1)}\n')  #?
 
             # gs-fin
-            FC = np.frompyfunc(FCfunc,10,1)(
+            FC = np.frompyfunc(lambda a,b,c,d,e,f,g,h,i,j: 0,10,1)(
                 range(0,n_gs_max+1),gs_a,gs_Req,gs_de,red_mass,
                 fin_hyp_a,fin_hyp_b,R_start,R_min,R_max
             ) # array(<k0|ma>, <k1|ma>, ...)
@@ -872,7 +874,7 @@ wp_prefs_list = []
 for res in range(N_res):
     wp_prefs_list.append(
         [(1.j/( N_res * (n_res_max_list[res] + 1) ) * rdg_au_list[res] * gs_res[res][0][nlambda] \
-          + mp.pi/( N_res * (n_res_max_list[res] + 1) ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda])
+          + 0) # mp.pi/( N_res * (n_res_max_list[res] + 1) ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda])
           for nlambda in range(n_res_max_list[res]+1)]
     )
 
@@ -976,11 +978,11 @@ def propagate(t_upper):
                     
                     # Direct term
                     if (integ_outer == "quadrature"):
-                        I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_upper)
+                        I1 = 0 # ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_upper)
                         dir_J1 = prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
     
                     elif (integ_outer == "romberg"):
-                        I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_upper)
+                        I1 = 0 # ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_upper)
                         dir_J1 = prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
                      
                     # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
@@ -1000,13 +1002,13 @@ def propagate(t_upper):
                                 if not partial_GamR == 'exp':
                                     res_J1 = (prefac_res * res_I[0]
                                               * gs_res[res][0][nlambda] * res_fin[res][nlambda][nmu])
-                                    indir_J1 = (prefac_indir * res_I[0]
-                                                * indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
+                                    indir_J1 = 0 # (prefac_indir * res_I[0]
+                                                *#  indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
                                 else:
                                     res_J1 = (prefac_res * res_I[0]
                                               * gs_res[res][0][nlambda] * res_fin_woVR[res][nlambda][nmu])
-                                    indir_J1 = (prefac_indir * res_I[0]
-                                                * indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
+                                    indir_J1 = 0 # (prefac_indir * res_I[0]
+                                                *#  indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
         
                             elif (integ_outer == "romberg"):
                                 res_I = ci.complex_romberg(res_outer_fun, (-TX_au/2), t_upper)
@@ -1014,13 +1016,13 @@ def propagate(t_upper):
                                 if not partial_GamR == 'exp':
                                     res_J1 = (prefac_res * res_I
                                               * gs_res[res][0][nlambda] * res_fin[res][nlambda][nmu])
-                                    indir_J1 = (prefac_indir * res_I
-                                                * indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
+                                    indir_J1 = 0 # (prefac_indir * res_I
+                                                *#  indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
                                 else:
                                     res_J1 = (prefac_res * res_I
                                               * gs_res[res][0][nlambda] * res_fin_woVR[res][nlambda][nmu])
-                                    indir_J1 = (prefac_indir * res_I
-                                                * indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
+                                    indir_J1 = 0 # (prefac_indir * res_I
+                                                *#  indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
             
                             J = (J
                                 + res_J1
