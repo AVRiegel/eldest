@@ -509,7 +509,7 @@ if (fin_pot_type == 'morse'):
                 sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
 
     else:
-        gs_fin = np.frompyfunc(wf.mp_FCmor_mor,11,1)(
+        gs_fin = np.frompyfunc(lambda a,b,c,d,e,f,g,h,i,j,k: 0,11,1)(
             range(0,n_fin_max+1),fin_a,fin_Req,fin_de,red_mass,
             np.arange(0,n_gs_max+1)[:,None],gs_a,gs_Req,gs_de,R_min,R_max
         ).astype(float)
