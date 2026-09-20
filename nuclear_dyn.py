@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-09-18 AVR                                            #
+# last change: 2026-09-21 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -592,7 +592,7 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
                     for l in range(0,n_res_max_list[res]+1):
                         res_fin_woVR[res][l].insert(0,FC[l])
                         print(f'res_state = {res+1}, l = {l}, res_fin_woVR = {FC[l]: 10.10E}, |res_fin_woVR| = {np.abs(FC[l]):10.10E}')   #?
-        #               outfile.write(f'res_state = {res+1}, l = {l}, res_fin_woVR = {FC[l]: 10.10E}, |res_fin_woVR| = {np.abs(FC[l]):10.10E}\n')   #?
+        #                outfile.write(f'res_state = {res+1}, l = {l}, res_fin_woVR = {FC[l]: 10.10E}, |res_fin_woVR| = {np.abs(FC[l]):10.10E}\n')   #?
             
             # Convergence check
             if (R_start > Req_max):         # Do not stop FC calc as long as R_start has not surpassed all Req

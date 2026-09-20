@@ -58,7 +58,7 @@ Gamma_type    = R6               # options: const, R6, external
 fc_precalc    = False            # use file with pre-calculated "Franck-Condon overlap integrals" for gs-fin and res-fin, flag -f
 partial_GamR  = None             # options: None, pre, exp (i. e. use Gamma-of-R dependence everywhere / only in prefactors / only in Wl)
 part_fc_pre   = False            # use file with pre-calculated FC overlap integrals without Gamma-of-R dependence, flag -F
-wavepac_only  = False            # calculate only the resonance-state projections, skip final-state projections'
+wavepac_only  = False            # calculate only the resonance-state projections, skip final-state projections
 #
 # parameters for the nuclear dynamics
 mass1         = 20.1797          # in g/mol
