@@ -979,11 +979,11 @@ def propagate(t_upper):
                     # Direct term
                     if (integ_outer == "quadrature"):
                         I1 = 0 # ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_upper)
-                        dir_J1 = prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
+                        dir_J1 = 0 # prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
     
                     elif (integ_outer == "romberg"):
                         I1 = 0 # ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_upper)
-                        dir_J1 = prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
+                        dir_J1 = 0 # prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
                      
                     # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
                     J = 0
@@ -1003,12 +1003,12 @@ def propagate(t_upper):
                                     res_J1 = (prefac_res * res_I[0]
                                               * gs_res[res][0][nlambda] * res_fin[res][nlambda][nmu])
                                     indir_J1 = 0 # (prefac_indir * res_I[0]
-                                                *#  indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
+                                                 # * indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
                                 else:
                                     res_J1 = (prefac_res * res_I[0]
                                               * gs_res[res][0][nlambda] * res_fin_woVR[res][nlambda][nmu])
                                     indir_J1 = 0 # (prefac_indir * res_I[0]
-                                                *#  indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
+                                                 # * indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
         
                             elif (integ_outer == "romberg"):
                                 res_I = ci.complex_romberg(res_outer_fun, (-TX_au/2), t_upper)
@@ -1017,12 +1017,12 @@ def propagate(t_upper):
                                     res_J1 = (prefac_res * res_I
                                               * gs_res[res][0][nlambda] * res_fin[res][nlambda][nmu])
                                     indir_J1 = 0 # (prefac_indir * res_I
-                                                *#  indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
+                                                 # * indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
                                 else:
                                     res_J1 = (prefac_res * res_I
                                               * gs_res[res][0][nlambda] * res_fin_woVR[res][nlambda][nmu])
                                     indir_J1 = 0 # (prefac_indir * res_I
-                                                *#  indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
+                                                 # * indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
             
                             J = (J
                                 + res_J1
