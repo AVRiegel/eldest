@@ -23,18 +23,20 @@ def read_input(inputfile, outfile):
     #
     # transitions dipole moments
     rdg_au       = 0.3            # transition dipole moment into the resonance state
+    rdg_au_2     = 0.3            # transition dipole moment into the second resonance state
     cdg_au       = 0.9            # transition dipole moment into any continuum state
     q            = 1
     # parameters of the investigated system
     # the ground state (vibrational gs of electronic gs) energy is being defined as EG = 0
-    Er_a_eV       =  150.0        # resonance energy (at potential minimum) in eV 
-    Er_b_eV       =    0.0
+    N_res		  =   1				 # number of electronic resonance states (1 or 2)
+    Er_a_eV       =  49.7477         # resonance energy (at potential minimum) in eV
+    Er_b_eV       =   0.0			 # second resonance energy (at potential minimum) in eV
+    E_fin_eV      =  39.9004         # final state energy (at potential minimum) in eV
+    tau_s         =  20E-15          # lifetime in s
+    tau_s_2       =   0.0			 # lifetime for second resonance state in s
     tau_a_s       =  0.0
     tau_b_s       =  0.0
-    E_fin_eV      =  70.0         # final state energy (at potential minimum) in eV
-    tau_s         =  4.0E-16      # lifetime in s
     E_fin_eV_2    =  0.0
-    tau_s_2       =  4.0E-16
     interact_eV   =  0.0
     #
     # laser parameters
@@ -91,6 +93,11 @@ def read_input(inputfile, outfile):
     res_a      = 1.930064
     res_Req    = 37.757254
     res_const  = 47.6930
+    # second-resonance-state parameters
+    res_de_2      = 0.0183747
+    res_a_2       = 15.3994
+    res_Req_2     = 6.0
+    res_const_2   = 0.0
     # final-state parameters
     fin_a      = -15.869110       # for morse: fin_de; for hyperbel or hypfree: V_a in au (Hartree * Bohr)
     fin_b      = 1.659155         # for morse: fin_a; for hyperbel or hypfree: V_b in au (Hartree)
@@ -102,9 +109,36 @@ def read_input(inputfile, outfile):
     f = open(inputfile, 'r')
     
     lines = f.readlines()
-    
+
+    res_lists = {'rdg_au': [rdg_au], 'Er_eV': [Er_a_eV], 'tau_s': [tau_s],
+                 'res_de': [res_de], 'res_a': [res_a], 'res_Req': [res_Req], 'res_const': [res_const]}
+
+    def res_lister(kw: str, printflag = True):
+        """Checks if line starts with kw_n and, if so, sets nth entry in res_lists[kw]."""
+        for res in range(2,N_res+1):
+            if words[0] == (kw + '_' + str(res)):
+                val = float(words[2])
+                res_lists[kw][res-1] = val  # res runs from 1 (or 2) to N_res, but the index runs from 0 (or 1) to N_res-1
+                if printflag:
+                    print(kw + '_' + str(res) + ' = ', val)
+                outfile.write(kw + '_' + str(res) + ' = ' + str(val) + '\n')
+                break
+
+    # The first thing we get: N_res
     for line in lines:
         words = line.split()
+        if (words[0] == 'N_res'):
+            N_res = int(words[2])
+            for key in res_lists.keys():    # Construct lists, initialize
+                res_lists[key] = [res_lists[key][0] for _ in range(N_res)]
+            print('N_res = ', N_res)
+            outfile.write('N_res = ' + str(N_res) + '\n')
+            break
+
+
+    for line in lines:
+        words = line.split()
+    # type of process
         if (words[0] == 'prc'):
             if (words[2] == 'ICD'):
                 X_ICD = True
@@ -123,30 +157,39 @@ def read_input(inputfile, outfile):
     # prefactors            
         elif (words[0] == 'rdg_au'):
             rdg_au = float(words[2])
+            res_lists['rdg_au'][0] = rdg_au
             print('rdg_au = ', rdg_au)
             outfile.write('rdg_au = ' + str(rdg_au) + '\n')
+        elif (words[0].startswith('rdg_au_')):  # Builds list of rdg_au_n values (n=2,3...)
+            res_lister('rdg_au')
         elif (words[0] == 'cdg_au'):
             cdg_au = float(words[2])
             print('cdg_au = ', cdg_au)
             outfile.write('cdg_au = ' + str(cdg_au) + '\n')
     
     # energy parameters of the system
-        elif (words[0] == 'Er_a_eV'):
-            Er_a_eV = float(words[2])
-            print('Er_a_eV = ', Er_a_eV)
-            outfile.write('Er_a_eV = ' + str(Er_a_eV) + '\n')
-        elif (words[0] == 'Er_b_eV'):
-            Er_b_eV = float(words[2])
-            print('Er_b_eV = ', Er_b_eV)
-            outfile.write('Er_b_eV = ' + str(Er_b_eV) + '\n')
+        elif (words[0] in {'Er_eV','Er_a_eV'}):
+            Er_eV = float(words[2])
+            res_lists['Er_eV'][0] = Er_eV
+            print('Er_eV = ', Er_eV)
+            outfile.write('Er_eV = ' + str(Er_eV) + '\n')
+        elif (words[0].startswith('Er_eV_')):
+            res_lister('Er_eV')
+        # elif (words[0] == 'Er_b_eV'):
+        #     Er_b_eV = float(words[2])
+        #     print('Er_b_eV = ', Er_b_eV)
+        #     outfile.write('Er_b_eV = ' + str(Er_b_eV) + '\n')
         elif (words[0] == 'E_fin_eV'):
             E_fin_eV = float(words[2])
             print('E_fin_eV = ', E_fin_eV)
             outfile.write('E_fin_eV = ' + str(E_fin_eV) + '\n')
         elif (words[0] == 'tau_s'):
             tau_s = float(words[2])
+            res_lists['tau_s'][0] = tau_s
             print('tau_s = ', tau_s)
             outfile.write('tau_s = ' + str(tau_s) + '\n')
+        elif (words[0].startswith('tau_s_')):
+            res_lister('tau_s')
         elif (words[0] == 'E_fin_eV_2'):
             E_fin_eV_2 = float(words[2])
             print('E_fin_eV_2 = ', E_fin_eV_2)
@@ -159,10 +202,6 @@ def read_input(inputfile, outfile):
             tau_b_s = float(words[2])
             print('tau_b_s = ', tau_b_s)
             outfile.write('tau_b_s = ' + str(tau_b_s) + '\n')
-        elif (words[0] == 'tau_s_2'):
-            tau_s_2 = float(words[2])
-            print('tau_s_2 = ', tau_s_2)
-            outfile.write('tau_s_2 = ' + str(tau_s_2) + '\n')
         elif (words[0] == 'interact_eV'):
             interact_eV = float(words[2])
             print('interact_eV = ', interact_eV)
@@ -353,6 +392,7 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'wavepac_only'):
             wavepac_only = True if words[2].lower() == 'true' else False
 
+    # vibrational-states parameters
         elif (words[0] == 'gs_de'):
             outfile.write('Parameters of potential energy curves:' + '\n')
             gs_de = float(words[2])
@@ -366,18 +406,32 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'gs_const'):
             gs_const = float(words[2])
             outfile.write('gs_const = ' + str(gs_const) + '\n')
+
         elif (words[0] == 'res_de'):
             res_de = float(words[2])
+            res_lists['res_de'][0] = res_de
             outfile.write('res_de = ' + str(res_de) + '\n')
         elif (words[0] == 'res_a'):
             res_a = float(words[2])
+            res_lists['res_a'][0] = res_a
             outfile.write('res_a = ' + str(res_a) + '\n')
         elif (words[0] == 'res_Req'):
             res_Req = float(words[2])
+            res_lists['res_Req'][0] = res_Req
             outfile.write('res_Req = ' + str(res_Req) + '\n')
         elif (words[0] == 'res_const'):
             res_const = float(words[2])
+            res_lists['res_const'][0] = res_const
             outfile.write('res_const = ' + str(res_const) + '\n')
+        elif (words[0].startswith('res_de_')):
+            res_lister('res_de',printflag=False)
+        elif (words[0].startswith('res_a_')):
+            res_lister('res_a',printflag=False)
+        elif (words[0].startswith('res_Req_')):
+            res_lister('res_Req',printflag=False)
+        elif (words[0].startswith('res_const_')):
+            res_lister('res_const',printflag=False)
+        
         elif (words[0] == 'fin_a'):
             fin_a = float(words[2])
             outfile.write('fin_a = ' + str(fin_a) + '\n')
@@ -394,13 +448,13 @@ def read_input(inputfile, outfile):
             fin_pot_type = str(words[2])
             outfile.write('fin_pot_type = ' + str(fin_pot_type) + '\n')
             if (fin_pot_type not in ['morse','hyperbel', 'hypfree']):
-                print('Non-existent final state potential type chosen, QUIT')
+                print('Non-existent final-state-potential type chosen, QUIT')
                 sys.exit()
     
     f.close()
     return (X_ICD, X_RICD,
-            rdg_au, cdg_au,
-            Er_a_eV, Er_b_eV, tau_a_s, tau_b_s, E_fin_eV, tau_s, E_fin_eV_2, tau_s_2,
+            res_lists['rdg_au'], cdg_au,
+            N_res, res_lists['Er_eV'], tau_a_s, tau_b_s, E_fin_eV, res_lists['tau_s'], E_fin_eV_2,
             interact_eV,
             Omega_eV, n_X, I_X, X_sinsq, X_gauss, Xshape,
             omega_eV, n_L, I_L, Lshape, delta_t_s, shift_step_s, phi, q, FWHM_L,
@@ -411,7 +465,7 @@ def read_input(inputfile, outfile):
             fc_precalc, partial_GamR, part_fc_pre, wavepac_only,
             mass1, mass2, grad_delta, R_eq_AA,
             gs_de, gs_a, gs_Req, gs_const,
-            res_de, res_a, res_Req, res_const,
+            res_lists['res_de'], res_lists['res_a'], res_lists['res_Req'], res_lists['res_const'],
             fin_a, fin_b, fin_c, fin_d, fin_pot_type
             )
 
@@ -715,6 +769,13 @@ def check_input(Er, E_fin, Gamma,
 # input of Franck-Condon overlap integrals including final states.
 
 def read_fc_input(inputfile):
+    """Reads in gs-res, gs-fin and res-fin Franck-Condon overlap integrals (multiple (N_res) electronic res states possible).\n
+    Returns:\n
+    ::gs_res: list of lists of lists: [lst0, lst1, ... lst(Nres-1)] where lsti = [[<k_0|l_i0>,<k_0|l_i1>,...,<k0|l_i(nresmax(i))], [<k_1|l_i0>, ...], ...]\n
+    ::gs_fin: list of lists: [[<k_0|m_0>,<k_0|m_1>,...], [<k_1|m_0>, ...], ...]\n
+    ::res_fin: list of lists of lists: [lst0, lst1, ... lst(Nres-1)] where lsti = [[<l_i0|m0>,<l_i0|m1>,...], [<l_i1|m0>, ...], ...]\n
+    ::n_fin_max_list: lists of lists: [[n_fin_max(res=0,l=0), n_fin_max(res=0,l=1),...], [n_fin_max(res=1,l=0),...], ...]\n
+    ::n_fin_max_X: int: len(gs_fin[0]) - 1\n"""
     # Python 3 compatibility hack
     try:
         unicode('')
@@ -723,28 +784,36 @@ def read_fc_input(inputfile):
 
 
     state = 'pre_gs-res'       # Encodes where we are in the input file
-    prev_n = 0      # The quantum number of gs in gs-res / gs-fin or of res in res-fin in the previous line
-    gs_res = [[]]
-    gs_fin = [[]]
-    res_fin = [[]]
+    prev_n = -1     # The quantum number of gs in gs-res / gs-fin or of res in res-fin in the previous line
+    res = 0         # The current electronic resonance state
 
     with open(inputfile, 'r') as f:
         lines = f.readlines()
 
+    N_res = 1   # Number of electronic resonance states
+    for line in lines:
+        if 'N_res = ' in line:
+            N_res = int(line.split('N_res = ')[-1].split()[0])
+            break
+
+    gs_res = [[] for _ in range(N_res)]
+    gs_fin = []
+    res_fin = [[] for _ in range(N_res)]
+
     lines_iter = iter(lines)
     for line in lines_iter:
+        # In the beginning, just search for the magic phrase
         if state == 'pre_gs-res':
             if line.startswith("Franck-Condon overlaps between ground and resonance state"):
                 state = 'gs-res'
-                next(lines_iter)
-                continue
-            else:
-                continue
+                next(lines_iter)    # Skip line after magic phrase (header of table)
+            continue
 
         words = line.split()
         if len(words) == 0:
             continue
 
+        # Change status if needed (pre_gs-res -> gs-res -> pre_gs-fin -> gs-fin -> pre_res-fin -> res-fin)
         if unicode(words[0]).isnumeric():
             if state == 'pre_gs-fin':
                 state = 'gs-fin'
@@ -752,33 +821,44 @@ def read_fc_input(inputfile):
                 state = 'res-fin'
         else:
             if state == 'gs-res':
-                state = 'pre_gs-fin'
-                prev_n = 0
+                if res == N_res - 1:    # We have read all gs-res for all res states
+                    state = 'pre_gs-fin'
+                    res = 0
+                elif line.startswith("Franck-Condon overlaps between ground and resonance state"):
+                    res = res + 1
+                    next(lines_iter)    # Skip line after magic phrase (header of table)
+                prev_n = -1
             elif state == 'gs-fin':
                 state = 'pre_res-fin'
-                prev_n = 0
+                prev_n = -1
             elif state == 'res-fin':
-                break
+                if res == N_res - 1:
+                    break
+                elif line.startswith("Franck-Condon overlaps between final"):
+                    res = res + 1
+                    prev_n = -1
+                    next(lines_iter)    # Skip line after magic phrase (header of table)
             continue
 
         if state == 'gs-res':
-            fcs = gs_res
+            fcs = gs_res[res]
         elif state == 'gs-fin':
             fcs = gs_fin
         elif state == 'res-fin':
-            fcs = res_fin
+            fcs = res_fin[res]
         else:
             sys.exit('The FC integral read-in situation has developed not necessarily to our advantage.')
 
-        if prev_n != int(words[0]):
+        if prev_n != int(words[0]): # If we reach a new first quantum number, create new empty sub-list
             prev_n = int(words[0])
             fcs.append(list())
         fcs[prev_n].append(complex(words[-1]))
 
-    n_fin_max_list = []             # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
-    for l in res_fin:
-        n_fin_max_list.append(len(l) - 1)
-    n_fin_max_X = len(gs_fin[0]) - 1                            # Will be used in hyperbel/hypfree case as the very highest nmu
+    n_fin_max_list = [[] for _ in range(N_res)] # Max quantum number considered in non-direct ionization for each lambda (all vibr fin states above the resp res state are discarded)
+    for res in range(N_res):
+        for l in res_fin[res]:
+            n_fin_max_list[res].append(len(l) - 1)      
+    n_fin_max_X = len(gs_fin[0]) - 1            # Will be used in hyperbel/hypfree case as the very highest nmu
 
     return (gs_res, gs_fin, res_fin, n_fin_max_list, n_fin_max_X)
 
