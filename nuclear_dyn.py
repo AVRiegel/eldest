@@ -875,7 +875,7 @@ wp_prefs_list = []
 for res in range(N_res):
     wp_prefs_list.append(
         [(1.j/( N_res * sum_Ni ) * rdg_au_list[res] * gs_res[res][0][nlambda] \
-          + 0 # mp.pi/( N_res * sum_Ni ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda])
+          + 0) # mp.pi/( N_res * sum_Ni ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda])
           for nlambda in range(n_res_max_list[res]+1)]
     )
 
