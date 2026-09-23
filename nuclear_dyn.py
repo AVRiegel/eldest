@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-09-21 AVR                                            #
+# last change: 2026-09-23 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -857,13 +857,14 @@ while (E_p_au <= Ep_max_au):
 
 #-------------------------------------------------------------------------
 # constants / prefactors
+sum_Ni = sum(n_res_max_list + 1)    # Sum_i^Nres N_i = Sum_i^Nres (n_res_max_i + 1)
 prefac_dir1 = 1j * cdg_au_V
 if not partial_GamR == 'exp':
-    prefac_res_list = VEr_au_list * rdg_au_list / ( N_res * (n_res_max_list + 1) )
-    prefac_indir_list = -1j * np.pi * VEr_au_list**2 * cdg_au_V / ( N_res * (n_res_max_list + 1) )
+    prefac_res_list = VEr_au_list * rdg_au_list / ( N_res * sum_Ni )
+    prefac_indir_list = -1j * np.pi * VEr_au_list**2 * cdg_au_V / ( N_res * sum_Ni )
 else:
-    prefac_res_list = VEr_au_woVR_list * rdg_au_list / ( N_res * (n_res_max_list + 1) )
-    prefac_indir_list = -1j * np.pi * VEr_au_woVR_list**2 * cdg_au_V / ( N_res * (n_res_max_list + 1) )     
+    prefac_res_list = VEr_au_woVR_list * rdg_au_list / ( N_res * sum_Ni )
+    prefac_indir_list = -1j * np.pi * VEr_au_woVR_list**2 * cdg_au_V / ( N_res * sum_Ni )
 
 
 if (fin_pot_type in ('hyperbel','hypfree')):
@@ -873,8 +874,8 @@ if (fin_pot_type in ('hyperbel','hypfree')):
 wp_prefs_list = []
 for res in range(N_res):
     wp_prefs_list.append(
-        [(1.j/( N_res * (n_res_max_list[res] + 1) ) * rdg_au_list[res] * gs_res[res][0][nlambda] \
-          + 0) # mp.pi/( N_res * (n_res_max_list[res] + 1) ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda])
+        [(1.j/( N_res * sum_Ni ) * rdg_au_list[res] * gs_res[res][0][nlambda] \
+          + 0 # mp.pi/( N_res * sum_Ni ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda])
           for nlambda in range(n_res_max_list[res]+1)]
     )
 
