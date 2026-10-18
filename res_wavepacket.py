@@ -72,7 +72,7 @@ with open(os.devnull, 'w') as dummyfile, silence_print():
      _, _, _, _, _, _,
      _, _, _, _, _, _, _, _, _,
      _, _, _, Ep_step_eV, _, _, Ep_min_eV, Ep_max_eV,
-     _, _, _, _, _, _, _,
+     _, _, _, _, _, _, _, _,
      mass1, mass2, _, _,
      _, _, _, _,
      De_list, alpha_list, Req_list, _,

@@ -77,6 +77,7 @@ def read_input(inputfile, outfile):
     part_fc_pre   = "False"       #
     wavepac_only  = "False"       #
     #
+    temp_kelvin   = 0.0           # temperature in kelvin for Boltzmann distribution over vibr states of electronic ground state
     # parameters for the nuclear dynamics
     mass1         = 20.1797       # in g/mol
     mass2         = 20.1797       # in g/mol
@@ -392,6 +393,11 @@ def read_input(inputfile, outfile):
         elif (words[0] == 'wavepac_only'):
             wavepac_only = True if words[2].lower() == 'true' else False
 
+        elif (words[0] == 'temp_kelvin'):
+            temp_kelvin = float(words[2])
+            print('temp_kelvin = ', temp_kelvin)
+            outfile.write('temp_kelvin = ' + str(temp_kelvin) + '\n')
+
     # vibrational-states parameters
         elif (words[0] == 'gs_de'):
             outfile.write('Parameters of potential energy curves:' + '\n')
@@ -462,7 +468,7 @@ def read_input(inputfile, outfile):
             E_min_eV, E_max_eV,
             Ep_min_eV, Ep_max_eV,
             integ, integ_outer, Gamma_type,
-            fc_precalc, partial_GamR, part_fc_pre, wavepac_only,
+            fc_precalc, partial_GamR, part_fc_pre, wavepac_only, temp_kelvin,
             mass1, mass2, grad_delta, R_eq_AA,
             gs_de, gs_a, gs_Req, gs_const,
             res_lists['res_de'], res_lists['res_a'], res_lists['res_Req'], res_lists['res_const'],
