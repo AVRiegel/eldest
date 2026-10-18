@@ -315,16 +315,16 @@ n_gs_max = int(lambda_param_gs - 0.5)
 print("n_gs_max = ", n_gs_max)
 E_kappas = [ wf.eigenvalue(n,gs_de,gs_a,red_mass) for n in range (0,n_gs_max+1) ]   # collects vibr energies of GS (in au)
 if temp_kelvin == 0 or n_gs_max == 0:
-    weights_kappas = np.zeros_like(E_kappas)
-    weights_kappas[0] = 1
+    prob_kappas = np.zeros_like(E_kappas)
+    prob_kappas[0] = 1
 else:
-    weights_kappas = np.exp(-( np.array(E_kappas) - E_kappas[0] ) / sciconv.joule_to_hartree(Boltzmann * temp_kelvin))  # Boltzmann weights for vibr eigenstates of GS at given temp
-    weights_kappas = weights_kappas / sum(weights_kappas)   # normalize by partition function to sum = 1
+    prob_kappas = np.exp(-( np.array(E_kappas) - E_kappas[0] ) / sciconv.joule_to_hartree(Boltzmann * temp_kelvin))  # Boltzmann weights for vibr eigenstates of GS at given temp
+    prob_kappas = prob_kappas / sum(prob_kappas)   # normalize by partition function to sum = 1
 print('n_gs  ' + 'E [au]            ' + 'E [eV]            ' + 'p(T = {:f} K)'.format(temp_kelvin))
 outfile.write('n_gs  ' + 'E [au]            ' + 'E [eV]            ' + 'p(T = {:f} K)'.format(temp_kelvin) + '\n')
 for n in range (0,n_gs_max+1):
-    print('{:4d}  {:14.10E}  {:14.10E}  {:9.7f}'.format(n,E_kappas[n],sciconv.hartree_to_ev(E_kappas[n]),weights_kappas[n]))
-    outfile.write('{:4d}  {:14.10E}  {:14.10E}  {:9.7f}\n'.format(n,E_kappas[n],sciconv.hartree_to_ev(E_kappas[n]),weights_kappas[n]))
+    print('{:4d}  {:14.10E}  {:14.10E}  {:9.7f}'.format(n,E_kappas[n],sciconv.hartree_to_ev(E_kappas[n]),prob_kappas[n]))
+    outfile.write('{:4d}  {:14.10E}  {:14.10E}  {:9.7f}\n'.format(n,E_kappas[n],sciconv.hartree_to_ev(E_kappas[n]),prob_kappas[n]))
 
 #resonance state
 lambda_param_res_list = np.sqrt(2*red_mass*np.array(res_de_list)) / res_a_list
@@ -401,8 +401,6 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
     print('Each E_mu is calculated as {0} au / R_start,\n where R_start begins at {1:.5f} au = {2:.5f} A\n and increases in constant steps of width {3:.5f} au = {4:.5f} A'.format(
         fin_hyp_a, R_start_EX_max, sciconv.bohr_to_angstrom(R_start_EX_max), R_hyp_step, sciconv.bohr_to_angstrom(R_hyp_step) ))
 
-close_files()
-sys.exit()
 #-------------------------------------------------------------------------
 # Franck-Condon factors
 #-------------------------------------------------------------------------
