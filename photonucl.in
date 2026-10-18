@@ -60,6 +60,7 @@ partial_GamR  = None             # options: None, pre, exp (i. e. use Gamma-of-R
 part_fc_pre   = False            # use file with pre-calculated FC overlap integrals without Gamma-of-R dependence, flag -F
 wavepac_only  = False            # calculate only the resonance-state projections, skip final-state projections
 #
+temp_kelvin   = 0.0              # temperature in kelvin for Boltzmann distribution over vibr states of electronic ground state 
 # parameters for the nuclear dynamics
 mass1         = 20.1797          # in g/mol
 mass2         = 20.1797          # in g/mol
