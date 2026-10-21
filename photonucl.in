@@ -1,23 +1,24 @@
-# Additional electronic resonance states can be added by including additional lines with X_2, X_3 etc. for
+# Additional electronic resonance states can be added by including additional lines with X_2, X_3 etc. for X =
 # rdg_au, Er_eV, tau_s, res_a, res_de, res_Req, res_const
 # Example: rdg_au_2 = 0.90
 # Keep the lines for the first electronic resonance state as they are (do not add '_1').
 # Indicate the number of electronic resonance states with N_res.
+#
 # process
 prc           = ICD              # options: ICD/RICD
 # transitions dipole moments
 rdg_au        = 0.70             # transition dipole moment into the resonance state
-#rdg_au_2      = 0.90		 # transition dipole moment into the second resonance state (if existent)
+#rdg_au_2      = 0.90             # transition dipole moment into the second resonance state (if existent)
 cdg_au        = 0.5              # transition dipole moment into any continuum state
 q             = 1
 # parameters of the investigated system
-# the ground state (vibrational gs of electronic gs) energy is being defined as EG = 0
-N_res	      =   1		 # number of electronic resonance states
+# The total ground state (vibrational gs of electronic gs) energy is being defined as EG = 0.
+N_res	      =   1              # number of electronic resonance states
 Er_eV         =  49.7477         # resonance energy (at potential minimum) in eV
-#Er_eV_2       =  51.0000	 # second resonance energy (at potential minimum) in eV (if existent)
+#Er_eV_2       =  51.0000         # second resonance energy (at potential minimum) in eV (if existent)
 E_fin_eV      =  39.9004         # final state energy (at potential minimum) in eV
 tau_s         =  20E-15          # lifetime in s
-#tau_s_2       =  40E-15 	 # lifetime for second resonance state in s (if existent)
+#tau_s_2       =  40E-15          # lifetime for second resonance state in s (if existent)
 E_fin_eV_2    =   0.0 
 tau_a_s       =   0.0
 tau_b_s       =   0.0
