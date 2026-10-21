@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-10-20 AVR                                            #
+# last change: 2026-10-21 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -874,15 +874,15 @@ else:
 if (fin_pot_type in ('hyperbel','hypfree')):
     n_fin_max = n_fin_max_X
 
-# for wavepacket in resonance state(s) (as list comprehension)
-wp_prefs_list = []
-for res in range(N_res):    # generalize this for multiple kappa
-    wp_prefs_list.append(
-        [(1.j/( N_res * (n_res_max_list[res] + 1) ) * rdg_au_list[res] * gs_res[res][0][nlambda] \
-          + 0) # mp.pi/( N_res * (n_res_max_list[res] + 1) ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda])
-          for nlambda in range(n_res_max_list[res]+1)]
-    )
-
+# for wavepacket in resonance state(s)
+# [[[M(0,0,k=0), M_(0,0,k=1), …], [M_(0,l=1,k=0), …], …], [[M(r=1,0,0), M(1,0,1), …], …], …] with M(r,l,k) = wp_pref(res=r,lambda=l,kappa=k)
+wp_prefs_list = [
+                    [
+                        [(1.j/( N_res * (n_res_max_list[res] + 1) ) * rdg_au_list[res] * gs_res[res][nkappa][nlambda] \
+                          + 0)#mp.pi/( N_res * (n_res_max_list[res] + 1) ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda][nkappa])
+                        for nkappa in range(n_gs_max+1)]
+                    for nlambda in range(n_res_max_list[res]+1)]
+                for res in range(N_res)]
 
 ########################################
 # now follow the integrals themselves, for the temporal phases:
@@ -922,29 +922,39 @@ def propagate(t_upper):
                             * res_inner(t1)
 
 
-    # for wavepacket in resonance state     # re-work to include multiple kappa
-    def t_plus(t):
-        return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au))
-    def t_minus(t):
-        return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au))
+    # for wavepacket in resonance state
+    # # with "exact" expression for FX_t1 (with Gaussian envelope)
+    # def t_plus(t):
+    #     return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-E_gs_au-1.j*mp.pi*W_au+Omega_au))
+    # def t_minus(t):
+    #     return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-E_gs_au-1.j*mp.pi*W_au-Omega_au))
 
-    def gamma_plus(T_up):
-        return ((Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au) * (mp.erf(t_plus(T_up)) \
-                                                - mp.erf(t_plus(-TX_au/2))) \
-                + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_plus(T_up)**2) \
-                                                - mp.exp(-t_plus(-TX_au/2)**2)))
-    def gamma_minus(T_up):
-        return ((Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au) * (mp.erf(t_minus(T_up)) \
-                                                - mp.erf(t_minus(-TX_au/2))) \
-                + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_minus(T_up)**2) \
-                                                - mp.exp(-t_minus(-TX_au/2)**2)))
+    # def gamma_plus(T_up):
+    #     return ((Er_au+E_lambda+E_p_au-E_gs_au-1.j*mp.pi*W_au) * (mp.erf(t_plus(T_up)) \
+    #                                             - mp.erf(t_plus(-TX_au/2))) \
+    #             + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_plus(T_up)**2) \
+    #                                             - mp.exp(-t_plus(-TX_au/2)**2)))
+    # def gamma_minus(T_up):
+    #     return ((Er_au+E_lambda+E_p_au-E_gs_au-1.j*mp.pi*W_au) * (mp.erf(t_minus(T_up)) \
+    #                                             - mp.erf(t_minus(-TX_au/2))) \
+    #             + 1.j/sigma * mp.sqrt(2/mp.pi) * (mp.exp(-t_minus(T_up)**2) \
+    #                                             - mp.exp(-t_minus(-TX_au/2)**2)))
+
+    # def wp_res_int(t,T_up):
+    #     return (A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au)) \
+    #             * (mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-E_gs_au-1.j*mp.pi*W_au+Omega_au)**2) \
+    #                 * gamma_plus(T_up) \
+    #              + mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-E_gs_au-1.j*mp.pi*W_au-Omega_au)**2) \
+    #                 * gamma_minus(T_up)))
+
+    # with "approximate" FX_t1 (envelope(t) ~ const., no emission)
+    def tau_wp(t):
+        return 1/(sigma*mp.sqrt(2)) * (t - 1.j*sigma**2*(Er_au+E_lambda+E_p_au-E_gs_au-1.j*mp.pi*W_au-Omega_au))
 
     def wp_res_int(t,T_up):
-        return (A0X*0.25j * mp.exp(-1.j*t*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au)) \
-                * (mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au+Omega_au)**2) \
-                    * gamma_plus(T_up) \
-                + mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au-Omega_au)**2) \
-                    * gamma_minus(T_up)))
+        return (A0X*0.25j*Omega_au * mp.exp(-1.j*t*(Er_au+E_lambda+E_p_au-1.j*mp.pi*W_au)) \
+                * mp.exp(-sigma**2/2 * (Er_au+E_lambda+E_p_au-E_gs_au-1.j*mp.pi*W_au-Omega_au)**2) \
+                * ( mp.erf(tau_wp(T_up)) - mp.erf(tau_wp(-TX_au/2)) )  )
     #-------------------------------------------------------------------------
 
 
@@ -980,29 +990,19 @@ def propagate(t_upper):
                     E_fin_au = E_fin_au_1 + E_mus[nmu]      # E_fin_au_1: inputted electronic E_fin_au, E_mus: vibrational eigenvalues of fin state
                     
                     # Direct term
-<<<<<<< HEAD
-                    if (integ_outer == "quadrature"):
-                        I1 = 0 # ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_upper)
-                        dir_J1 = 0 # prefac_dir1 * I1[0] * gs_fin[0][nmu]        # [0] of quad integ result = integral (rest is est error & info); FC = <mu_n|kappa_0>
-    
-                    elif (integ_outer == "romberg"):
-                        I1 = 0 # ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_upper)
-                        dir_J1 = 0 # prefac_dir1 * I1 * gs_fin[0][nmu]           # romberg returns only the integral, so no [0] necessary
-=======
                     dir_J = 0       # dir_J = sum_kappa (dir_J)_kappa;  (dir_J)_kappa = prefac * I1 * <mu|kappa> * d_kappa * exp(i*t_0*E_g,kappa)
-                    for nkappa in range(0, n_gs_max+1):
-                        E_gs_au = E_kappas[nkappa] - E_kappas[0]
-
-                        if (integ_outer == "quadrature"):
-                            I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_upper)
-                            dir_J1 = prefac_dir1 * I1[0] * gs_fin[nkappa][nmu] * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)        # [0] of quad integ result = integral (rest is est error & info); FC = <mu|kappa>; d_kappa = sqrt(p_kappa)
-        
-                        elif (integ_outer == "romberg"):
-                            I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_upper)
-                            dir_J1 = prefac_dir1 * I1 * gs_fin[nkappa][nmu] * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)           # romberg returns only the integral, so no [0] necessary
-
-                        dir_J = dir_J + dir_J1
->>>>>>> 8c50999 (generalized to multiple vibr states in elec ground state (not for wavepacket yet))
+#                    for nkappa in range(0, n_gs_max+1):
+#                        E_gs_au = E_kappas[nkappa] - E_kappas[0]
+#
+#                        if (integ_outer == "quadrature"):
+#                            I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_upper)
+#                            dir_J1 = prefac_dir1 * I1[0] * gs_fin[nkappa][nmu] * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)        # [0] of quad integ result = integral (rest is est error & info); FC = <mu|kappa>; d_kappa = sqrt(p_kappa)
+#        
+#                        elif (integ_outer == "romberg"):
+#                            I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_upper)
+#                            dir_J1 = prefac_dir1 * I1 * gs_fin[nkappa][nmu] * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)           # romberg returns only the integral, so no [0] necessary
+#
+#                        dir_J = dir_J + dir_J1
                      
                     # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
                     J = 0
@@ -1025,48 +1025,17 @@ def propagate(t_upper):
                                         res_J1 = (prefac_res * res_I[0]
                                                 * gs_res[res][nkappa][nlambda] * res_fin[res][nlambda][nmu]
                                                 * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
-                                        indir_J1 = (prefac_indir * res_I[0]
-                                                    * indir_FCsums_list[res][nlambda][nkappa] * res_fin[res][nlambda][nmu]
-                                                    * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
+                                        indir_J1 = 0#(prefac_indir * res_I[0]
+                                                    #* indir_FCsums_list[res][nlambda][nkappa] * res_fin[res][nlambda][nmu]
+                                                    #* mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
                                     else:
                                         res_J1 = (prefac_res * res_I[0]
                                                 * gs_res[res][nkappa][nlambda] * res_fin_woVR[res][nlambda][nmu]
                                                 * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
-                                        indir_J1 = (prefac_indir * res_I[0]
-                                                    * indir_FCsums_list[res][nlambda][nkappa] * res_fin_woVR[res][nlambda][nmu]
-                                                    * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
+                                        indir_J1 = 0#(prefac_indir * res_I[0]
+                                                    #* indir_FCsums_list[res][nlambda][nkappa] * res_fin_woVR[res][nlambda][nmu]
+                                                    #* mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
             
-<<<<<<< HEAD
-                                if not partial_GamR == 'exp':
-                                    res_J1 = (prefac_res * res_I[0]
-                                              * gs_res[res][0][nlambda] * res_fin[res][nlambda][nmu])
-                                    indir_J1 = 0 # (prefac_indir * res_I[0]
-                                                 # * indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
-                                else:
-                                    res_J1 = (prefac_res * res_I[0]
-                                              * gs_res[res][0][nlambda] * res_fin_woVR[res][nlambda][nmu])
-                                    indir_J1 = 0 # (prefac_indir * res_I[0]
-                                                 # * indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
-        
-                            elif (integ_outer == "romberg"):
-                                res_I = ci.complex_romberg(res_outer_fun, (-TX_au/2), t_upper)
-                            
-                                if not partial_GamR == 'exp':
-                                    res_J1 = (prefac_res * res_I
-                                              * gs_res[res][0][nlambda] * res_fin[res][nlambda][nmu])
-                                    indir_J1 = 0 # (prefac_indir * res_I
-                                                 # * indir_FCsums_list[res][nlambda] * res_fin[res][nlambda][nmu])
-                                else:
-                                    res_J1 = (prefac_res * res_I
-                                              * gs_res[res][0][nlambda] * res_fin_woVR[res][nlambda][nmu])
-                                    indir_J1 = 0 # (prefac_indir * res_I
-                                                 # * indir_FCsums_list[res][nlambda] * res_fin_woVR[res][nlambda][nmu])
-            
-                            J = (J
-                                + res_J1
-                                + indir_J1
-                                )
-=======
                                 elif (integ_outer == "romberg"):
                                     res_I = ci.complex_romberg(res_outer_fun, (-TX_au/2), t_upper)
                                 
@@ -1074,22 +1043,21 @@ def propagate(t_upper):
                                         res_J1 = (prefac_res * res_I
                                                 * gs_res[res][nkappa][nlambda] * res_fin[res][nlambda][nmu]
                                                 * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
-                                        indir_J1 = (prefac_indir * res_I
-                                                    * indir_FCsums_list[res][nlambda][nkappa] * res_fin[res][nlambda][nmu]
-                                                    * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
+                                        indir_J1 = 0#(prefac_indir * res_I
+                                                    #* indir_FCsums_list[res][nlambda][nkappa] * res_fin[res][nlambda][nmu]
+                                                    #* mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
                                     else:
                                         res_J1 = (prefac_res * res_I
                                                 * gs_res[res][nkappa][nlambda] * res_fin_woVR[res][nlambda][nmu]
                                                 * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
-                                        indir_J1 = (prefac_indir * res_I
-                                                    * indir_FCsums_list[res][nlambda][nkappa] * res_fin_woVR[res][nlambda][nmu]
-                                                    * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
+                                        indir_J1 = 0#(prefac_indir * res_I
+                                                    #* indir_FCsums_list[res][nlambda][nkappa] * res_fin_woVR[res][nlambda][nmu]
+                                                    #* mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
                 
                                 J = (J
                                     + res_J1
                                     + indir_J1
                                     )
->>>>>>> 8c50999 (generalized to multiple vibr states in elec ground state (not for wavepacket yet))
         
                     # Total trs prob (@E_kin, t) = sum_mu |J_mu|**2
                     # For cont rep fin: int (dE_mu |J_mu|**2 E-DOS(E_mu)) = int (dR_mu |J_mu|**2 R-DOS(R_mu))
@@ -1121,18 +1089,21 @@ def propagate(t_upper):
                 print(Ekins[max_pos[i] // len(Ep)], Ep[max_pos[i] % len(Ep)], squares[max_pos[i]])      # print all loc max & resp E_kin, E_p
                 outfile.write(str(Ekins[max_pos[i] // len(Ep)]) + '  ' + str(Ep[max_pos[i] % len(Ep)]) + '  ' + str(squares[max_pos[i]]) + '\n')
     
-    # wavepacket in resonance state(s)  #re-work for multiple kappa
+    # wavepacket in resonance state(s)
     for res in range(N_res):
-        wp_ampls = []
+        wp_ampls = []       # ['l=0 Ep=Epmin t wp_ampl', 'l=0 Ep=Epmin+Epstep t wp_ampl', …, 'l=1 Ep=Epmin t wp_ampl', …]
         Er_au = Er_au_list[res]
         for nlambda in range (0,n_res_max_list[res]+1):
             E_lambda = E_lambdas_list[res][nlambda]
             W_au = W_lambda_list[res][nlambda]
-            wp_pref = wp_prefs_list[res][nlambda] 
             E_p_au = Ep_min_au
             while (E_p_au <= Ep_max_au):
-                wp_I = wp_res_int(t_au,t_upper)
-                wp_ampl = wp_pref * wp_I
+                wp_ampl = 0
+                for nkappa in range(0, n_gs_max+1):
+                    E_gs_au = E_kappas[nkappa] - E_kappas[0]
+                    wp_pref = wp_prefs_list[res][nlambda][nkappa]
+                    wp_I = wp_res_int(t_au,t_upper)
+                    wp_ampl = wp_ampl + wp_pref * wp_I * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)
                 wp_string = format(nlambda, 'd') + '   ' + format(sciconv.hartree_to_ev(E_p_au), '>8.5f') + '   ' + '   ' + format(sciconv.atu_to_second(t_au), ' .18f') \
                         + '   ' + format(complex(wp_ampl), ' .15e')
                 wp_ampls.append(wp_string)
