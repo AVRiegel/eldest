@@ -118,7 +118,7 @@ for res in range(N_res):
     if res == 0:
         print(f'num_p = {num_p} <=> E_p = {Ep_eV:>8.5f} eV')
     data = raw_data.loc[raw_data[1] == Ep_eV].reset_index(drop=True)
-    data.drop(1,axis=1,inplace=True)
+    data = data.drop(1,axis=1)
     data.columns = range(data.columns.size)
 
     # Morse potential
@@ -249,6 +249,6 @@ if N_res > 1:
 
     infile_list.append('wp_res_total.dat')
 
-print('### Manually perform the following command: ###\n for f in {}; do ps2pdf "gp_wf_"$f".eps" gp_uncropped.pdf; pdfcrop gp_uncropped.pdf "wavefunction_"$f"_combined.pdf" >/dev/null; rm "gp_wf_"$f".eps" gp_uncropped.pdf; done\n ######'.format(
+print('### Manually perform the following command: ###\n for f in {}; do ps2pdf "gp_wf_"$f".eps" "gp_uncropped_"$f".pdf"; pdfcrop "gp_uncropped_"$f".pdf" "wavefunction_"$f"_combined.pdf" >/dev/null || continue; rm "gp_wf_"$f".eps" "gp_uncropped_"$f".pdf"; done\n ######'.format(
     ' '.join(f"'{file.rpartition('.')[0]}'" for file in infile_list)
 ))
