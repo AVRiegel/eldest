@@ -860,13 +860,14 @@ while (E_p_au <= Ep_max_au):
 
 #-------------------------------------------------------------------------
 # constants / prefactors
+sum_Ni = sum(n_res_max_list + 1)    # Sum_i^Nres N_i = Sum_i^Nres (n_res_max_i + 1)
 prefac_dir1 = 1j * cdg_au_V
 if not partial_GamR == 'exp':
-    prefac_res_list = VEr_au_list * rdg_au_list / ( N_res * (n_res_max_list + 1) )
-    prefac_indir_list = -1j * np.pi * VEr_au_list**2 * cdg_au_V / ( N_res * (n_res_max_list + 1) )
+    prefac_res_list = VEr_au_list * rdg_au_list / sum_Ni
+    prefac_indir_list = -1j * np.pi * VEr_au_list**2 * cdg_au_V / sum_Ni
 else:
-    prefac_res_list = VEr_au_woVR_list * rdg_au_list / ( N_res * (n_res_max_list + 1) )
-    prefac_indir_list = -1j * np.pi * VEr_au_woVR_list**2 * cdg_au_V / ( N_res * (n_res_max_list + 1) )     
+    prefac_res_list = VEr_au_woVR_list * rdg_au_list / sum_Ni
+    prefac_indir_list = -1j * np.pi * VEr_au_woVR_list**2 * cdg_au_V / sum_Ni
 
 
 if (fin_pot_type in ('hyperbel','hypfree')):
@@ -876,8 +877,8 @@ if (fin_pot_type in ('hyperbel','hypfree')):
 # [[[M(0,0,k=0), M_(0,0,k=1), …], [M_(0,l=1,k=0), …], …], [[M(r=1,0,0), M(1,0,1), …], …], …] with M(r,l,k) = wp_pref(res=r,lambda=l,kappa=k)
 wp_prefs_list = [
                     [
-                        [(1.j/( N_res * (n_res_max_list[res] + 1) ) * rdg_au_list[res] * gs_res[res][nkappa][nlambda] \
-                          + mp.pi/( N_res * (n_res_max_list[res] + 1) ) * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda][nkappa])
+                        [(1.j/sum_Ni * rdg_au_list[res] * gs_res[res][nkappa][nlambda] \
+                          + mp.pi/sum_Ni * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda][nkappa])
                         for nkappa in range(n_gs_max+1)]
                     for nlambda in range(n_res_max_list[res]+1)]
                 for res in range(N_res)]
