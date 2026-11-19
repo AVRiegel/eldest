@@ -11,7 +11,7 @@
 ##########################################################################
 # written by: Elke Fasshauer November 2020                               #
 # extended by: Alexander V. Riegel from July 2023 onwards                #
-# last change: 2026-11-13 AVR                                            #
+# last change: 2026-11-19 AVR                                            #
 ##########################################################################
 
 import argparse
@@ -87,6 +87,8 @@ print(str(dt_start))
 outfile.write(str(dt_start) + '\n')
 outfile.write('Tempora mutantur, nos et mutamur in illis.\n')
 outfile.write("The results were obtained with nuclear_dyn.py\n")
+outfile.write("WARNING: ONLY RESONANCE PATHWAY IS ACTIVE, OTHERS ARE SUPPRESSED!\n")
+print("WARNING: ONLY RESONANCE PATHWAY IS ACTIVE, OTHERS ARE SUPPRESSED!")
 
 infile = args.infile
 print(infile)
@@ -510,7 +512,7 @@ if (fin_pot_type == 'morse'):
                 sys.exit('!!! Files of FC integrals with and without Gamma(R) dependence are incompatible. Programme terminated.')
 
     else:
-        gs_fin = np.frompyfunc(wf.mp_FCmor_mor,11,1)(
+        gs_fin = np.frompyfunc(lambda a,b,c,d,e,f,g,h,i,j,k: 0,11,1)(
             range(0,n_fin_max+1),fin_a,fin_Req,fin_de,red_mass,
             np.arange(0,n_gs_max+1)[:,None],gs_a,gs_Req,gs_de,R_min,R_max
         ).astype(float)
@@ -568,7 +570,7 @@ elif (fin_pot_type in ('hyperbel','hypfree')):
     #        outfile.write(f'R_start = {R_start:5.5f} au = {sciconv.bohr_to_angstrom(R_start):5.5f} A, E_mu = {E_mu:5.5f} au = {sciconv.hartree_to_ev(E_mu):5.5f} eV, steps: {int((R_start - R_start_EX_max) / R_hyp_step  + 0.1)}\n')  #?
 
             # gs-fin
-            FC = np.frompyfunc(FCfunc,10,1)(
+            FC = np.frompyfunc(lambda a,b,c,d,e,f,g,h,i,j: 0,10,1)(
                 range(0,n_gs_max+1),gs_a,gs_Req,gs_de,red_mass,
                 fin_hyp_a,fin_hyp_b,R_start,R_min,R_max
             ) # array(<k0|ma>, <k1|ma>, ...)
@@ -878,7 +880,7 @@ if (fin_pot_type in ('hyperbel','hypfree')):
 wp_prefs_list = [
                     [
                         [(1.j/sum_Ni * rdg_au_list[res] * gs_res[res][nkappa][nlambda] \
-                          + mp.pi/sum_Ni * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda][nkappa])
+                          + 0) # mp.pi/sum_Ni * VEr_au_list[res] * cdg_au_V * indir_FCsums_list[res][nlambda][nkappa])
                         for nkappa in range(n_gs_max+1)]
                     for nlambda in range(n_res_max_list[res]+1)]
                 for res in range(N_res)]
@@ -990,18 +992,18 @@ def propagate(t_upper):
                     
                     # Direct term
                     dir_J = 0       # dir_J = sum_kappa (dir_J)_kappa;  (dir_J)_kappa = prefac * I1 * <mu|kappa> * d_kappa * exp(i*t_0*E_g,kappa)
-                    for nkappa in range(0, n_gs_max+1):
-                        E_gs_au = E_kappas[nkappa] - E_kappas[0]
-
-                        if (integ_outer == "quadrature"):
-                            I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_upper)
-                            dir_J1 = prefac_dir1 * I1[0] * gs_fin[nkappa][nmu] * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)        # [0] of quad integ result = integral (rest is est error & info); FC = <mu|kappa>; d_kappa = sqrt(p_kappa)
-        
-                        elif (integ_outer == "romberg"):
-                            I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_upper)
-                            dir_J1 = prefac_dir1 * I1 * gs_fin[nkappa][nmu] * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)           # romberg returns only the integral, so no [0] necessary
-
-                        dir_J = dir_J + dir_J1
+#                    for nkappa in range(0, n_gs_max+1):
+#                        E_gs_au = E_kappas[nkappa] - E_kappas[0]
+#
+#                        if (integ_outer == "quadrature"):
+#                            I1 = ci.complex_quadrature(fun_t_dir_1, (-TX_au/2), t_upper)
+#                            dir_J1 = prefac_dir1 * I1[0] * gs_fin[nkappa][nmu] * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)        # [0] of quad integ result = integral (rest is est error & info); FC = <mu|kappa>; d_kappa = sqrt(p_kappa)
+#        
+#                        elif (integ_outer == "romberg"):
+#                            I1 = ci.complex_romberg(fun_t_dir_1, (-TX_au/2), t_upper)
+#                            dir_J1 = prefac_dir1 * I1 * gs_fin[nkappa][nmu] * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au)           # romberg returns only the integral, so no [0] necessary
+#
+#                        dir_J = dir_J + dir_J1
                      
                     # J_nondir,mu = sum_lambda J_nondir,mu,lambda = sum_lambda (J_res,mu,lambda + J_indir,mu,lambda)
                     J = 0
@@ -1024,16 +1026,16 @@ def propagate(t_upper):
                                         res_J1 = (prefac_res * res_I[0]
                                                 * gs_res[res][nkappa][nlambda] * res_fin[res][nlambda][nmu]
                                                 * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
-                                        indir_J1 = (prefac_indir * res_I[0]
-                                                    * indir_FCsums_list[res][nlambda][nkappa] * res_fin[res][nlambda][nmu]
-                                                    * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
+                                        indir_J1 = 0 #(prefac_indir * res_I[0]
+                                                     #* indir_FCsums_list[res][nlambda][nkappa] * res_fin[res][nlambda][nmu]
+                                                     #* mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
                                     else:
                                         res_J1 = (prefac_res * res_I[0]
                                                 * gs_res[res][nkappa][nlambda] * res_fin_woVR[res][nlambda][nmu]
                                                 * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
-                                        indir_J1 = (prefac_indir * res_I[0]
-                                                    * indir_FCsums_list[res][nlambda][nkappa] * res_fin_woVR[res][nlambda][nmu]
-                                                    * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
+                                        indir_J1 = 0 #(prefac_indir * res_I[0]
+                                                     #* indir_FCsums_list[res][nlambda][nkappa] * res_fin_woVR[res][nlambda][nmu]
+                                                     #* mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
             
                                 elif (integ_outer == "romberg"):
                                     res_I = ci.complex_romberg(res_outer_fun, (-TX_au/2), t_upper)
@@ -1042,16 +1044,16 @@ def propagate(t_upper):
                                         res_J1 = (prefac_res * res_I
                                                 * gs_res[res][nkappa][nlambda] * res_fin[res][nlambda][nmu]
                                                 * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
-                                        indir_J1 = (prefac_indir * res_I
-                                                    * indir_FCsums_list[res][nlambda][nkappa] * res_fin[res][nlambda][nmu]
-                                                    * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
+                                        indir_J1 = 0 #(prefac_indir * res_I
+                                                     #* indir_FCsums_list[res][nlambda][nkappa] * res_fin[res][nlambda][nmu]
+                                                     #* mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
                                     else:
                                         res_J1 = (prefac_res * res_I
                                                 * gs_res[res][nkappa][nlambda] * res_fin_woVR[res][nlambda][nmu]
                                                 * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
-                                        indir_J1 = (prefac_indir * res_I
-                                                    * indir_FCsums_list[res][nlambda][nkappa] * res_fin_woVR[res][nlambda][nmu]
-                                                    * mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
+                                        indir_J1 = 0 #(prefac_indir * res_I
+                                                     #* indir_FCsums_list[res][nlambda][nkappa] * res_fin_woVR[res][nlambda][nmu]
+                                                     #* mp.sqrt(prob_kappas[nkappa]) * mp.exp(1j * (-TX_au/2) * E_gs_au) )
                 
                                 J = (J
                                     + res_J1
